@@ -19,6 +19,7 @@ rig interactive     # Start interactive mode
 rig logs            # Explore application logs
 rig security        # Security analysis and vulnerability scanning
 rig cost            # Cost analysis and optimization
+rig generate        # Generate Infrastructure as Code configurations
 rig --version       # Check version
 rig --help          # Show available commands
 
@@ -106,6 +107,90 @@ rig logs --cloud --limit 20
 
 # Troubleshoot recent deployment
 rig logs --cloud --resource kubernetes --since 30m --limit 15
+```
+
+# Generate Command Usage
+
+The generate command provides Infrastructure as Code (IaC) generation capabilities, analyzing your project and creating production-ready configurations.
+
+## Interactive Generation
+```bash
+rig generate                        # Interactive mode with generation options
+```
+
+## Specific Generation Types
+```bash
+rig generate terraform              # Generate Terraform modules and configurations
+rig generate kubernetes             # Generate Kubernetes manifests and Helm charts
+rig generate docker                 # Generate Dockerfiles and compose configurations
+rig generate cicd                   # Generate CI/CD pipeline configurations
+rig generate monitoring             # Generate monitoring stack configurations
+rig generate security               # Generate security policies and configurations
+```
+
+## Generation Options
+```bash
+rig generate --analyze              # Analyze project before generation
+rig generate --import               # Import existing cloud resources
+rig generate -o ./infrastructure    # Specify output directory
+rig generate --force                # Overwrite existing files
+```
+
+## Project Analysis Features
+- **Technology Stack Detection**: Automatically detects Node.js, Python, Java, Go, and other frameworks
+- **Dependency Analysis**: Analyzes package files and existing configurations
+- **Cloud Resource Discovery**: Imports existing GCP resources for configuration generation
+- **Best Practice Recommendations**: Suggests optimal configurations based on project type
+
+## Terraform Generation
+- **Complete Infrastructure**: Main configurations, variables, outputs, and providers
+- **Modular Architecture**: Separate modules for compute, networking, storage, and databases
+- **Resource Import**: Generate configurations from existing cloud resources
+- **Multi-Environment**: Development, staging, and production configurations
+
+## Kubernetes Generation
+- **Application Manifests**: Deployments, services, ingress, and config maps
+- **Helm Charts**: Production-ready charts with customizable values
+- **Security Contexts**: Non-root users, read-only filesystems, and security policies
+- **Kustomize Support**: Base configurations with environment overlays
+
+## Docker Generation
+- **Multi-stage Builds**: Optimized builds for different programming languages
+- **Security Best Practices**: Non-root users, health checks, and minimal attack surface
+- **Docker Compose**: Complete stack configurations including databases and caching
+- **Language-specific Optimizations**: Framework-aware configurations
+
+## CI/CD Generation
+- **GitHub Actions**: Complete workflows with testing, security scanning, and deployment
+- **GitLab CI/CD**: Comprehensive pipelines with stages and security integration
+- **Multi-environment Deployment**: Automated deployment to development, staging, and production
+- **Security Integration**: Built-in vulnerability scanning and security checks
+
+## Monitoring Generation
+- **Prometheus Stack**: Complete monitoring setup with service discovery
+- **Grafana Dashboards**: Application-specific dashboards and alerts
+- **Logging Stack**: Loki integration with log aggregation
+- **AlertManager**: Production-ready alerting rules and notifications
+
+## Security Configuration Generation
+- **Open Policy Agent (OPA)**: Container security and resource limit policies
+- **Network Policies**: Kubernetes network segmentation and security
+- **RBAC Configurations**: Role-based access control for applications and users
+- **Compliance Frameworks**: SOC 2, GDPR, and CIS benchmark configurations
+- **Security Scanning**: Trivy, Hadolint, and Snyk configurations
+
+### Example Generation Workflow
+```bash
+# Analyze project and generate complete infrastructure
+rig generate --analyze
+
+# Generate specific components
+rig generate terraform --import -o ./terraform
+rig generate kubernetes -o ./k8s
+rig generate monitoring -o ./monitoring
+
+# Generate with custom output directory
+rig generate docker -o ./containers --force
 ```
 
 # Security Command Usage

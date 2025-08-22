@@ -134,4 +134,16 @@ program
     await logsCommand(options);
   });
 
+program
+  .command('generate [type]')
+  .description('Generate Infrastructure as Code configurations')
+  .option('-o, --output <dir>', 'Output directory')
+  .option('-f, --force', 'Overwrite existing files')
+  .option('--analyze', 'Analyze project first')
+  .option('--import', 'Import existing cloud resources')
+  .action(async (type, options) => {
+    const { generate } = await import('./commands/generate.js');
+    await generate(type, options);
+  });
+
 program.parse(process.argv);

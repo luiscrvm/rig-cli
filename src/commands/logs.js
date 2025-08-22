@@ -295,7 +295,25 @@ async function fetchCloudLogs(options) {
     
     if (stderr && !stderr.includes('WARNING')) {
       spinner.fail('Failed to fetch cloud logs');
-      console.error(chalk.red(stderr));
+      console.error(chalk.red(`Error: ${stderr}`));
+      
+      // Provide specific guidance for permission errors
+      if (stderr.includes('PERMISSION_DENIED')) {
+        console.log(chalk.yellow('\n🔐 Permission Issue Detected'));
+        console.log(chalk.gray('Your account needs the following IAM roles to access Cloud Logging:'));
+        console.log(chalk.gray('• Logging/Logs Viewer (roles/logging.viewer)'));
+        console.log(chalk.gray('• Logging/Private Logs Viewer (roles/logging.privateLogViewer)'));
+        console.log(chalk.gray('\nTo fix this issue:'));
+        console.log(chalk.cyan('1. Ask your GCP admin to grant you logging permissions'));
+        console.log(chalk.cyan('2. Or use a service account with proper permissions'));
+        console.log(chalk.cyan('3. Or switch to local logs: rig logs (without --cloud flag)'));
+        
+        console.log(chalk.yellow('\n💡 Alternative Solutions:'));
+        console.log(chalk.gray('• Use local logs: rig logs --error --limit 50'));
+        console.log(chalk.gray('• Switch GCP project: rig init (to reconfigure)'));
+        console.log(chalk.gray(`• Check current project: gcloud config get-value project`));
+      }
+      
       return;
     }
     

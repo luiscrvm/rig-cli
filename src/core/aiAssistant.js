@@ -165,18 +165,18 @@ export class AIAssistant {
     // Format as a readable string instead of returning an object
     let result = `**${recommendation.title}**\n\n`;
     result += `Based on the issue description, this appears to be a ${category} issue.\n\n`;
-    result += `**Resolution Steps:**\n`;
+    result += '**Resolution Steps:**\n';
     recommendation.steps.forEach(step => {
       result += `${step}\n`;
     });
-    result += `\n**Prevention Measures:**\n`;
+    result += '\n**Prevention Measures:**\n';
     recommendation.prevention.forEach(measure => {
       result += `• ${measure}\n`;
     });
-    result += `\n**Additional Resources:**\n`;
-    result += `• Check cloud provider documentation\n`;
-    result += `• Review system logs\n`;
-    result += `• Consult team runbooks\n`;
+    result += '\n**Additional Resources:**\n';
+    result += '• Check cloud provider documentation\n';
+    result += '• Review system logs\n';
+    result += '• Consult team runbooks\n';
     
     return result;
   }

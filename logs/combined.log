@@ -47,3 +47,31 @@
 {"level":"error","message":"Ollama generation failed: timeout of 60000ms exceeded","timestamp":"2025-08-22T22:03:58.555Z"}
 {"level":"error","message":"AI Assistant error: timeout of 60000ms exceeded","timestamp":"2025-08-22T22:03:58.558Z"}
 {"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T22:07:56.141Z"}
+{"level":"warn","message":"Cloud provider not configured. Generated files will use placeholder values.","timestamp":"2025-08-22T22:42:02.324Z"}
+{"level":"warn","message":"GCP project ID not found. Run `rig init` to configure.","timestamp":"2025-08-22T22:42:02.326Z"}
+{"level":"info","message":"Run `rig init` to configure cloud provider integration.","timestamp":"2025-08-22T22:42:02.325Z"}
+{"level":"info","message":"Skipping cloud resource analysis - no project configured","timestamp":"2025-08-22T22:42:02.480Z"}
+{"level":"warn","message":"Cloud provider not configured. Generated files will use placeholder values.","timestamp":"2025-08-22T22:42:25.497Z"}
+{"level":"info","message":"Using GCP project: my-test-project in region: us-east1","timestamp":"2025-08-22T22:42:25.498Z"}
+{"level":"info","message":"Run `rig init` to configure cloud provider integration.","timestamp":"2025-08-22T22:42:25.498Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T22:44:17.127Z"}
+{"level":"error","message":"Failed to list GCP networks: Command failed: gcloud compute networks list --project=optimum-phalanx-458320-b1 --format=json\nAPI [compute.googleapis.com] not enabled on project [optimum-phalanx-458320-b1]. Would you like to enable and \nretry (this will take a few minutes)? (y/N)?  ","timestamp":"2025-08-22T22:45:55.313Z"}
+{"level":"error","message":"Failed to list GCP databases: Command failed: gcloud sql instances list --project=optimum-phalanx-458320-b1 --format=json\nERROR: (gcloud.sql.instances.list) [luis.villalobos@hatchworks.com] does not have permission to access projects instance [optimum-phalanx-458320-b1] (or it may not exist): The client is not authorized to make this request. This command is authenticated as luis.villalobos@hatchworks.com which is the active account specified by the [core/account] property.\n","timestamp":"2025-08-22T22:45:56.375Z"}
+{"level":"error","message":"Failed to list GCP load balancers: Command failed: gcloud compute forwarding-rules list --project=optimum-phalanx-458320-b1 --format=json\nAPI [compute.googleapis.com] not enabled on project [optimum-phalanx-458320-b1]. Would you like to enable and \nretry (this will take a few minutes)? (y/N)?  ","timestamp":"2025-08-22T22:46:11.388Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T22:51:24.803Z"}
+{"level":"warn","message":"Cloud provider not configured. Generated files will use placeholder values.","timestamp":"2025-08-22T22:52:43.409Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T22:52:43.412Z"}
+{"level":"info","message":"Run `rig init` to configure cloud provider integration.","timestamp":"2025-08-22T22:52:43.411Z"}
+{"level":"warn","message":"Cloud provider not configured. Generated files will use placeholder values.","timestamp":"2025-08-22T22:54:51.280Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T22:54:51.281Z"}
+{"level":"info","message":"Run `rig init` to configure cloud provider integration.","timestamp":"2025-08-22T22:54:51.281Z"}
+{"level":"error","message":"Infrastructure generation failed: this.generateStorageModuleFromResources is not a function","timestamp":"2025-08-22T22:55:12.319Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T22:57:29.793Z"}
+{"level":"error","message":"Infrastructure generation failed: this.generateStorageModuleFromResources is not a function","timestamp":"2025-08-22T22:57:50.628Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T22:58:37.381Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T23:00:10.467Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-08-22T23:01:10.014Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T23:10:57.419Z"}
+{"level":"error","message":"Failed to list GCP networks: Command failed: gcloud compute networks list --project=aibrandedbooth --format=json\nAPI [compute.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this \nwill take a few minutes)? (y/N)?  ","timestamp":"2025-08-22T23:15:50.365Z"}
+{"level":"error","message":"Failed to list GCP databases: Command failed: gcloud sql instances list --project=aibrandedbooth --format=json\nAPI [sqladmin.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this \nwill take a few minutes)? (y/N)?  ","timestamp":"2025-08-22T23:16:05.382Z"}
+{"level":"error","message":"Failed to list GCP load balancers: Command failed: gcloud compute forwarding-rules list --project=aibrandedbooth --format=json\nAPI [compute.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this \nwill take a few minutes)? (y/N)?  ","timestamp":"2025-08-22T23:16:20.395Z"}

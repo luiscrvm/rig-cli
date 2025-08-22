@@ -11,6 +11,32 @@ export class CloudManager {
       gcp: new GCPProvider(),
       // azure: new AzureProvider()
     };
+    this.initialized = false;
+  }
+
+  async initialize() {
+    if (this.initialized) {
+      return true;
+    }
+
+    try {
+      // Check if we have GCP configuration
+      const hasGcpConfig = process.env.GCP_PROJECT_ID && process.env.GCP_PROJECT_ID !== 'your-gcp-project-id';
+      
+      if (hasGcpConfig) {
+        // Verify gcloud CLI is available and authenticated
+        const gcpProvider = this.providers.gcp;
+        await gcpProvider.initialize(process.env.GCP_PROJECT_ID);
+        this.initialized = true;
+        return true;
+      } else {
+        // No valid configuration found
+        throw new Error('No cloud provider configuration found');
+      }
+    } catch (error) {
+      this.initialized = false;
+      throw error;
+    }
   }
 
   async getProvider(name) {

@@ -11,6 +11,8 @@ An AI-powered CLI tool designed to help engineers manage cloud infrastructure ac
 - **Real-time Monitoring**: Track infrastructure health and metrics
 - **Cost Analysis**: Monitor and optimize cloud spending
 - **Security Auditing**: Automated security checks and compliance monitoring
+- **Infrastructure as Code**: Generate Terraform, Kubernetes, Docker, and CI/CD configurations
+- **Log Exploration**: Local and cloud log analysis with advanced filtering
 - **Automated Backups**: Schedule and manage infrastructure backups
 
 ### 🤖 AI Integration
@@ -70,7 +72,13 @@ rig troubleshoot --issue "database connection timeout" --suggest
 rig monitor --metrics
 
 # Run security audit
-rig security --audit
+rig security --scan
+
+# Generate infrastructure configurations
+rig generate terraform
+
+# Explore logs
+rig logs --cloud --error --since 1h
 ```
 
 ## Command Reference
@@ -149,17 +157,22 @@ rig backup --restore backup-id-123
 ```
 
 ### `rig security`
-Security audit and compliance
+Security analysis and vulnerability scanning
 ```bash
-# Run security audit
-rig security --audit
+# Interactive security menu
+rig security
 
-# Check compliance
-rig security --compliance CIS
-rig security --compliance PCI
+# Run vulnerability scan
+rig security --scan
 
-# Auto-fix security issues
-rig security --fix
+# Check compliance with security standards
+rig security --compliance
+
+# Generate comprehensive security report
+rig security --report
+
+# Combined analysis
+rig security --scan --compliance --report
 ```
 
 ### `rig cost`
@@ -171,8 +184,54 @@ rig cost --analyze
 # Get optimization recommendations
 rig cost --optimize
 
-# Set budget alerts
-rig cost --budget 5000
+# Generate cost forecasts
+rig cost --forecast
+
+# Generate comprehensive cost report
+rig cost --report
+```
+
+### `rig logs`
+Explore local and cloud logs
+```bash
+# Display local logs
+rig logs --limit 50
+
+# Fetch cloud logs from GCP
+rig logs --cloud --since 1h --limit 20
+
+# Filter by severity level
+rig logs --cloud --error
+rig logs --cloud --severity WARNING
+
+# Filter by resource type
+rig logs --cloud --resource cloudsql
+rig logs --cloud --resource compute
+
+# Export logs
+rig logs --cloud --limit 100 --export json
+rig logs --export csv --error
+```
+
+### `rig generate`
+Generate Infrastructure as Code configurations
+```bash
+# Interactive generation menu
+rig generate
+
+# Generate specific components
+rig generate terraform    # Terraform modules and configurations
+rig generate kubernetes   # K8s manifests and Helm charts
+rig generate docker      # Dockerfiles and compose configs
+rig generate cicd        # GitHub Actions/GitLab CI/CD pipelines
+rig generate monitoring  # Prometheus/Grafana stack
+rig generate security    # Security policies and configurations
+
+# Options
+rig generate --analyze              # Analyze project first
+rig generate --import               # Import existing cloud resources
+rig generate terraform -o ./infra  # Custom output directory
+rig generate --force               # Overwrite existing files
 ```
 
 ## Configuration
@@ -256,14 +315,17 @@ rig cost --budget 10000
 ### 4. Security Compliance
 Ensure infrastructure meets security standards:
 ```bash
-# Run comprehensive audit
-rig security --audit
+# Run comprehensive vulnerability scan
+rig security --scan
 
-# Check specific compliance
-rig security --compliance HIPAA
+# Check compliance with standards
+rig security --compliance
 
-# Auto-fix issues
-rig security --fix
+# Generate security report
+rig security --report
+
+# Generate security configurations
+rig generate security -o ./security-configs
 ```
 
 ### 5. Disaster Recovery
@@ -277,6 +339,36 @@ rig backup --list
 
 # Restore if needed
 rig backup --restore backup-2024-01-20
+```
+
+### 6. Infrastructure as Code
+Generate production-ready configurations:
+```bash
+# Analyze current project and generate complete stack
+rig generate --analyze
+
+# Generate specific components
+rig generate terraform --import    # Import existing resources
+rig generate kubernetes -o ./k8s   # Kubernetes manifests
+rig generate docker                # Containerization configs
+rig generate cicd                  # CI/CD pipelines
+rig generate monitoring            # Observability stack
+```
+
+### 7. Log Analysis and Monitoring
+Explore application and infrastructure logs:
+```bash
+# Monitor recent errors
+rig logs --cloud --error --since 1h --limit 10
+
+# Investigate database issues
+rig logs --cloud --resource cloudsql --severity WARNING
+
+# Export security audit logs
+rig logs --cloud --resource audit --since 24h --export json
+
+# Monitor application health
+rig logs --error --export csv
 ```
 
 ## Architecture
@@ -293,15 +385,28 @@ rig-cli/
 │   │   ├── troubleshoot.js
 │   │   ├── backup.js
 │   │   ├── security.js
-│   │   └── cost.js
+│   │   ├── cost.js
+│   │   ├── logs.js
+│   │   └── generate.js
 │   ├── core/              # Core business logic
 │   │   ├── cloudManager.js
 │   │   ├── aiAssistant.js
-│   │   └── interactive.js
+│   │   ├── interactive.js
+│   │   ├── projectAnalyzer.js
+│   │   └── ollamaAI.js
 │   ├── providers/         # Cloud provider implementations
 │   │   ├── aws.js
 │   │   ├── gcp.js
 │   │   └── azure.js
+│   ├── generators/        # Infrastructure as Code generators
+│   │   ├── terraformGenerator.js
+│   │   ├── kubernetesGenerator.js
+│   │   ├── dockerGenerator.js
+│   │   ├── cicdGenerator.js
+│   │   ├── monitoringGenerator.js
+│   │   └── securityConfigGenerator.js
+│   ├── auth/             # Authentication modules
+│   │   └── gcloudAuth.js
 │   └── utils/            # Utility functions
 │       └── logger.js
 ├── tests/                # Test files
@@ -387,9 +492,14 @@ MIT License - See LICENSE file for details
 
 ## Roadmap
 
-- [ ] Kubernetes integration
-- [ ] Terraform/CloudFormation support
-- [ ] Slack/Teams notifications
+- [x] Infrastructure as Code generation (Terraform, Kubernetes, Docker, CI/CD)
+- [x] GCP Cloud Logging integration
+- [x] Security vulnerability scanning and compliance checking
+- [x] AI-powered cost analysis and optimization
+- [x] Local AI assistant with Ollama support
+- [ ] AWS CloudWatch and Azure Monitor log integration
+- [ ] Kubernetes cluster management and deployment
+- [ ] Slack/Teams notifications and alerts
 - [ ] Custom plugin system
 - [ ] Mobile app companion
 - [ ] GraphQL API
