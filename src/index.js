@@ -118,10 +118,16 @@ program
 
 program
   .command('logs')
-  .description('Explore and export application logs')
+  .description('Explore local and cloud logs')
   .option('-l, --limit <number>', 'Limit number of log entries to display')
   .option('-e, --export <format>', 'Export logs to file (json|csv)')
   .option('--error', 'Show only error logs')
+  .option('-r, --resource <id>', 'Filter logs for a specific resource')
+  .option('--cloud', 'Fetch logs from GCP Cloud Logging instead of local logs')
+  .option('--since <time>', 'Time range for cloud logs (e.g., 1h, 24h, 7d, 30d)')
+  .option('--severity <level>', 'Minimum severity for cloud logs (DEBUG|INFO|WARNING|ERROR|CRITICAL)')
+  .option('--project <id>', 'GCP project ID (uses current if not specified)')
+  .option('--debug', 'Show raw log entry structure for debugging')
   .action(async (options) => {
     const { logsCommand } = await import('./commands/logs.js');
     await logsCommand(options);
