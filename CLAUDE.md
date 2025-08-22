@@ -16,8 +16,16 @@ npm start           # Run the CLI directly
 # CLI usage after linking
 rig init            # Initialize and configure cloud providers
 rig interactive     # Start interactive mode
+rig logs            # Explore application logs
 rig --version       # Check version
 rig --help          # Show available commands
+
+# Logs command usage
+rig logs                    # Display all logs
+rig logs --limit 10         # Display last 10 log entries
+rig logs --error            # Display only error logs
+rig logs --export json      # Export logs to JSON file
+rig logs --export csv       # Export logs to CSV file
 ```
 
 ## Architecture Overview

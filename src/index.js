@@ -116,4 +116,15 @@ program
     await costAnalysis(options);
   });
 
+program
+  .command('logs')
+  .description('Explore and export application logs')
+  .option('-l, --limit <number>', 'Limit number of log entries to display')
+  .option('-e, --export <format>', 'Export logs to file (json|csv)')
+  .option('--error', 'Show only error logs')
+  .action(async (options) => {
+    const { logsCommand } = await import('./commands/logs.js');
+    await logsCommand(options);
+  });
+
 program.parse(process.argv);
