@@ -90,4 +90,32 @@ export class CloudManager {
       throw error;
     }
   }
+
+  async listAllResources(provider = 'gcp', region = null) {
+    try {
+      const resourceTypes = ['instances', 'storage', 'networks', 'databases', 'load-balancers'];
+      const allResources = [];
+      
+      for (const type of resourceTypes) {
+        try {
+          const resources = await this.listResources(provider, type, region, true);
+          allResources.push({
+            type: type,
+            items: resources || []
+          });
+        } catch (error) {
+          allResources.push({
+            type: type,
+            items: [],
+            error: error.message
+          });
+        }
+      }
+      
+      return allResources;
+    } catch (error) {
+      this.logger.error(`Failed to list all resources: ${error.message}`);
+      throw error;
+    }
+  }
 }

@@ -50,18 +50,18 @@ export class GCPProvider {
     if (type) {
       // Handle specific resource type requests
       switch (type) {
-        case 'instances':
-          return await this.listInstances(region, silent);
-        case 'storage':
-          return await this.listBuckets(silent);
-        case 'network':
-          return await this.listNetworks(silent);
-        case 'database':
-          return await this.listDatabases(silent);
-        case 'loadbalancer':
-          return await this.listLoadBalancers(silent);
-        default:
-          return [];
+      case 'instances':
+        return await this.listInstances(region, silent);
+      case 'storage':
+        return await this.listBuckets(silent);
+      case 'network':
+        return await this.listNetworks(silent);
+      case 'database':
+        return await this.listDatabases(silent);
+      case 'loadbalancer':
+        return await this.listLoadBalancers(silent);
+      default:
+        return [];
       }
     } else {
       // Discover all available resources in the project
@@ -207,7 +207,7 @@ export class GCPProvider {
       
       // Check for permission errors and provide helpful guidance (only if not silent)
       if (!silent && (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403'))) {
-        throw new Error(`❌ Permission denied: You don't have access to list compute instances in this project.\n   Required permission: compute.instances.list\n   Contact your GCP admin or check IAM roles.`);
+        throw new Error('❌ Permission denied: You don\'t have access to list compute instances in this project.\n   Required permission: compute.instances.list\n   Contact your GCP admin or check IAM roles.');
       }
       
       if (!silent && error.message.includes('API') && error.message.includes('not enabled')) {
@@ -245,7 +245,7 @@ export class GCPProvider {
     } catch (error) {
       // Check for permission errors first
       if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
-        throw new Error(`❌ Permission denied: You don't have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.`);
+        throw new Error('❌ Permission denied: You don\'t have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.');
       }
       
       // If gsutil fails for other reasons, try using gcloud storage
@@ -270,11 +270,11 @@ export class GCPProvider {
         
         // Check for permission errors and provide helpful guidance
         if (innerError.message.includes('Permission') || innerError.message.includes('denied') || innerError.message.includes('403')) {
-          throw new Error(`❌ Permission denied: You don't have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.`);
+          throw new Error('❌ Permission denied: You don\'t have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.');
         }
         
         if (innerError.message.includes('API') && innerError.message.includes('not enabled')) {
-          throw new Error(`❌ Cloud Storage API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/storage.googleapis.com`);
+          throw new Error('❌ Cloud Storage API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/storage.googleapis.com');
         }
         
         return [];
@@ -305,11 +305,11 @@ export class GCPProvider {
       
       // Check for permission errors and provide helpful guidance
       if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
-        throw new Error(`❌ Permission denied: You don't have access to list VPC networks in this project.\n   Required permission: compute.networks.list\n   Contact your GCP admin or check IAM roles.`);
+        throw new Error('❌ Permission denied: You don\'t have access to list VPC networks in this project.\n   Required permission: compute.networks.list\n   Contact your GCP admin or check IAM roles.');
       }
       
       if (error.message.includes('API') && error.message.includes('not enabled')) {
-        throw new Error(`❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com`);
+        throw new Error('❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com');
       }
       
       return [];
@@ -339,11 +339,11 @@ export class GCPProvider {
       
       // Check for permission errors and provide helpful guidance
       if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
-        throw new Error(`❌ Permission denied: You don't have access to list Cloud SQL instances in this project.\n   Required permission: cloudsql.instances.list\n   Contact your GCP admin or check IAM roles.`);
+        throw new Error('❌ Permission denied: You don\'t have access to list Cloud SQL instances in this project.\n   Required permission: cloudsql.instances.list\n   Contact your GCP admin or check IAM roles.');
       }
       
       if (error.message.includes('API') && error.message.includes('not enabled')) {
-        throw new Error(`❌ Cloud SQL Admin API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/sqladmin.googleapis.com`);
+        throw new Error('❌ Cloud SQL Admin API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/sqladmin.googleapis.com');
       }
       
       return [];
@@ -373,11 +373,11 @@ export class GCPProvider {
       
       // Check for permission errors and provide helpful guidance
       if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
-        throw new Error(`❌ Permission denied: You don't have access to list load balancers in this project.\n   Required permission: compute.forwardingRules.list\n   Contact your GCP admin or check IAM roles.`);
+        throw new Error('❌ Permission denied: You don\'t have access to list load balancers in this project.\n   Required permission: compute.forwardingRules.list\n   Contact your GCP admin or check IAM roles.');
       }
       
       if (error.message.includes('API') && error.message.includes('not enabled')) {
-        throw new Error(`❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com`);
+        throw new Error('❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com');
       }
       
       return [];
@@ -388,14 +388,14 @@ export class GCPProvider {
     await this.initialize();
     
     switch (type) {
-      case 'instance':
-        return await this.createInstance(config);
-      case 'bucket':
-        return await this.createBucket(config);
-      case 'network':
-        return await this.createNetwork(config);
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instance':
+      return await this.createInstance(config);
+    case 'bucket':
+      return await this.createBucket(config);
+    case 'network':
+      return await this.createNetwork(config);
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 
@@ -467,12 +467,12 @@ export class GCPProvider {
     await this.initialize();
     
     switch (type) {
-      case 'instance':
-        return await this.deleteInstance(resourceId);
-      case 'bucket':
-        return await this.deleteBucket(resourceId);
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instance':
+      return await this.deleteInstance(resourceId);
+    case 'bucket':
+      return await this.deleteBucket(resourceId);
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 

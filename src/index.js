@@ -97,9 +97,9 @@ program
 program
   .command('security')
   .description('Security audit and compliance checks')
-  .option('-a, --audit', 'Run security audit')
-  .option('-c, --compliance <standard>', 'Check compliance (CIS|PCI|HIPAA)')
-  .option('-f, --fix', 'Auto-fix security issues')
+  .option('-s, --scan', 'Run vulnerability scan')
+  .option('-c, --compliance', 'Check compliance with security standards')
+  .option('-r, --report', 'Generate comprehensive security report')
   .action(async (options) => {
     const { security } = await import('./commands/security.js');
     await security(options);
@@ -109,11 +109,12 @@ program
   .command('cost')
   .description('Cost analysis and optimization')
   .option('-a, --analyze', 'Analyze current costs')
-  .option('-o, --optimize', 'Get optimization recommendations')
-  .option('-b, --budget <amount>', 'Set budget alerts')
+  .option('-o, --optimize', 'Find cost optimization opportunities')
+  .option('-f, --forecast', 'Generate cost forecasts')
+  .option('-r, --report', 'Generate comprehensive cost report')
   .action(async (options) => {
-    const { costAnalysis } = await import('./commands/cost.js');
-    await costAnalysis(options);
+    const { cost } = await import('./commands/cost.js');
+    await cost(options);
   });
 
 program

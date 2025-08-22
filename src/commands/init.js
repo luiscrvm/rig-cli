@@ -401,7 +401,7 @@ async function saveConfiguration(config) {
 
   // Add AI configuration to .env
   if (config.credentials.ai.provider === 'ollama') {
-    envContent += `\n# AI Configuration\nAI_PROVIDER=ollama\n`;
+    envContent += '\n# AI Configuration\nAI_PROVIDER=ollama\n';
     if (config.credentials.ai.model) {
       envContent += `OLLAMA_MODEL=${config.credentials.ai.model}\n`;
     }

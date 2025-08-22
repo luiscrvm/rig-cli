@@ -29,16 +29,16 @@ export class AWSProvider {
     if (!this.ec2Client) await this.initialize(region);
 
     switch (type) {
-      case 'instances':
-        return await this.listInstances();
-      case 'storage':
-        return await this.listStorage();
-      case 'network':
-        return await this.listNetworks();
-      case 'database':
-        return await this.listDatabases();
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instances':
+      return await this.listInstances();
+    case 'storage':
+      return await this.listStorage();
+    case 'network':
+      return await this.listNetworks();
+    case 'database':
+      return await this.listDatabases();
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 
@@ -105,12 +105,12 @@ export class AWSProvider {
     if (!this.ec2Client) await this.initialize(config.region);
 
     switch (type) {
-      case 'instance':
-        return await this.createInstance(config);
-      case 'bucket':
-        return await this.createBucket(config);
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instance':
+      return await this.createInstance(config);
+    case 'bucket':
+      return await this.createBucket(config);
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 
@@ -171,10 +171,10 @@ export class AWSProvider {
     if (!this.ec2Client) await this.initialize();
 
     switch (type) {
-      case 'instance':
-        return await this.terminateInstance(resourceId);
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instance':
+      return await this.terminateInstance(resourceId);
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 

@@ -25,7 +25,7 @@ async function listResources(cloudManager, provider, options) {
   const region = options.region; // Don't default to any region - pull from entire project
   
   if (options.verbose) {
-    console.log(chalk.gray(`📋 Resource query details:`));
+    console.log(chalk.gray('📋 Resource query details:'));
     console.log(chalk.gray(`   Provider: ${provider}`));
     console.log(chalk.gray(`   Type: ${resourceType || 'all resource types'}`));
     console.log(chalk.gray(`   Region: ${region || 'all regions/zones'}`));

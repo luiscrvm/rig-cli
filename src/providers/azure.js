@@ -22,12 +22,12 @@ export class AzureProvider {
     if (!this.computeClient) await this.initialize();
 
     switch (type) {
-      case 'instances':
-        return await this.listVirtualMachines();
-      case 'storage':
-        return await this.listStorageAccounts();
-      default:
-        return [];
+    case 'instances':
+      return await this.listVirtualMachines();
+    case 'storage':
+      return await this.listStorageAccounts();
+    default:
+      return [];
     }
   }
 
@@ -59,12 +59,12 @@ export class AzureProvider {
 
   async createResource(type, config) {
     switch (type) {
-      case 'instance':
-        return { status: 'creating', message: 'Azure VM creation simulated' };
-      case 'storage':
-        return { status: 'created', message: 'Azure storage creation simulated' };
-      default:
-        throw new Error(`Unsupported resource type: ${type}`);
+    case 'instance':
+      return { status: 'creating', message: 'Azure VM creation simulated' };
+    case 'storage':
+      return { status: 'created', message: 'Azure storage creation simulated' };
+    default:
+      throw new Error(`Unsupported resource type: ${type}`);
     }
   }
 

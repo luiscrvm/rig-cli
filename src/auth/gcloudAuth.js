@@ -66,12 +66,12 @@ export class GCloudAuth {
 
     try {
       switch (authMethod) {
-        case 'browser':
-          return await this.browserAuth();
-        case 'service-account':
-          return await this.serviceAccountAuth();
-        case 'adc':
-          return await this.adcAuth();
+      case 'browser':
+        return await this.browserAuth();
+      case 'service-account':
+        return await this.serviceAccountAuth();
+      case 'adc':
+        return await this.adcAuth();
       }
     } catch (error) {
       console.error(chalk.red(`Authentication failed: ${error.message}`));

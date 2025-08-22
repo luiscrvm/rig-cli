@@ -17,6 +17,8 @@ npm start           # Run the CLI directly
 rig init            # Initialize and configure cloud providers
 rig interactive     # Start interactive mode
 rig logs            # Explore application logs
+rig security        # Security analysis and vulnerability scanning
+rig cost            # Cost analysis and optimization
 rig --version       # Check version
 rig --help          # Show available commands
 
@@ -105,6 +107,108 @@ rig logs --cloud --limit 20
 # Troubleshoot recent deployment
 rig logs --cloud --resource kubernetes --since 30m --limit 15
 ```
+
+# Security Command Usage
+
+The security command provides comprehensive security analysis, vulnerability scanning, and compliance checking for your cloud infrastructure.
+
+## Interactive Security Analysis
+```bash
+rig security                        # Interactive mode with options menu
+```
+
+## Vulnerability Scanning
+```bash
+rig security --scan                 # Run vulnerability scan on all resources
+```
+Features:
+- Scans compute instances for security misconfigurations
+- Checks storage buckets for public access issues
+- Validates network security settings
+- Reviews database security configurations
+- Identifies IAM and service account issues
+
+## Compliance Checking
+```bash
+rig security --compliance          # Check compliance with security standards
+```
+Supported standards:
+- SOC 2 compliance checks
+- PCI DSS requirements
+- GDPR compliance validation
+
+## Security Reports
+```bash
+rig security --report              # Generate comprehensive security report
+```
+Includes:
+- Executive summary with key metrics
+- Detailed vulnerability analysis
+- Compliance status overview
+- AI-powered security roadmap and recommendations
+
+### Example Security Issues Detected
+- **HIGH**: Storage buckets allowing public access
+- **MEDIUM**: Resources not using customer-managed encryption
+- **HIGH**: Databases without SSL requirements
+- **CRITICAL**: Databases accepting connections from any IP
+- **MEDIUM**: Instances using default service accounts
+
+# Cost Command Usage
+
+The cost command provides detailed cost analysis, optimization recommendations, and forecasting for your cloud resources.
+
+## Interactive Cost Analysis
+```bash
+rig cost                            # Interactive mode with analysis options
+```
+
+## Cost Analysis
+```bash
+rig cost --analyze                  # Analyze current resource costs
+```
+Provides:
+- Total monthly cost breakdown by resource type
+- High-cost resource identification
+- Underutilized resource detection
+- Resource count and usage statistics
+
+## Cost Optimization
+```bash
+rig cost --optimize                 # Find cost optimization opportunities
+```
+Identifies:
+- Right-sizing opportunities for over-provisioned resources
+- Preemptible instance conversion possibilities
+- Storage lifecycle optimization
+- Automated scheduling for cost reduction
+
+## Cost Forecasting
+```bash
+rig cost --forecast                 # Generate cost projections
+```
+Features:
+- 3, 6, and 12-month cost projections
+- Scenario-based planning (conservative, aggressive, optimized)
+- Growth pattern analysis
+
+## Comprehensive Cost Reports
+```bash
+rig cost --report                   # Generate detailed cost report
+```
+Includes:
+- Executive summary with key financial metrics
+- Current cost breakdown and analysis
+- Optimization opportunities with potential savings
+- Cost forecasts and scenario planning
+- AI-powered cost strategy recommendations
+
+### Example Optimization Opportunities
+- **Right-sizing**: Downsize underutilized instances (save $25/month)
+- **Preemptible**: Convert fault-tolerant workloads (save 60% on compute)
+- **Scheduling**: Implement automated start/stop schedules (save 40%)
+- **Storage Classes**: Move infrequently accessed data to cheaper tiers (save 50%)
+- **Lifecycle Policies**: Automatically delete old data (save 30%)
 ```
 
 ## Architecture Overview

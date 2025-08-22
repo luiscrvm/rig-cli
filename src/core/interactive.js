@@ -42,27 +42,27 @@ export class InteractiveMode {
       ]);
 
       switch (action) {
-        case 'view':
-          await this.viewResources();
-          break;
-        case 'troubleshoot':
-          await this.troubleshootIssue();
-          break;
-        case 'monitor':
-          await this.monitorServices();
-          break;
-        case 'ai':
-          await this.aiChat();
-          break;
-        case 'settings':
-          await this.setupContext();
-          break;
-        case 'management':
-          await this.managementMode();
-          break;
-        case 'exit':
-          exit = true;
-          break;
+      case 'view':
+        await this.viewResources();
+        break;
+      case 'troubleshoot':
+        await this.troubleshootIssue();
+        break;
+      case 'monitor':
+        await this.monitorServices();
+        break;
+      case 'ai':
+        await this.aiChat();
+        break;
+      case 'settings':
+        await this.setupContext();
+        break;
+      case 'management':
+        await this.managementMode();
+        break;
+      case 'exit':
+        exit = true;
+        break;
       }
     }
 
@@ -377,27 +377,27 @@ export class InteractiveMode {
       }
 
       switch (action) {
-        case 'deploy':
-          await this.deployInfrastructure();
-          break;
-        case 'cost':
-          await this.analyzeCosts();
-          break;
-        case 'security':
-          await this.securityAudit();
-          break;
-        case 'backup':
-          await this.backupOperations();
-          break;
-        case 'create':
-          await this.createResource();
-          break;
-        case 'modify':
-          await this.modifyResource();
-          break;
-        case 'delete':
-          await this.deleteResource();
-          break;
+      case 'deploy':
+        await this.deployInfrastructure();
+        break;
+      case 'cost':
+        await this.analyzeCosts();
+        break;
+      case 'security':
+        await this.securityAudit();
+        break;
+      case 'backup':
+        await this.backupOperations();
+        break;
+      case 'create':
+        await this.createResource();
+        break;
+      case 'modify':
+        await this.modifyResource();
+        break;
+      case 'delete':
+        await this.deleteResource();
+        break;
       }
     }
   }

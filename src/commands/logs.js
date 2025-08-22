@@ -284,7 +284,7 @@ async function fetchCloudLogs(options) {
     command += ` --limit=${limit}`;
     
     // Add format
-    command += ` --format=json`;
+    command += ' --format=json';
     
     // Add project (use option or environment variable)
     const projectId = options.project || process.env.GCP_PROJECT_ID;
