@@ -30,15 +30,12 @@ export class InteractiveMode {
           name: 'action',
           message: 'What would you like to do?',
           choices: [
-            { name: '📊 View Resources', value: 'view' },
-            { name: '🚀 Deploy Infrastructure', value: 'deploy' },
+            { name: '📊 View Resources (Read-only)', value: 'view' },
             { name: '🔍 Troubleshoot Issue', value: 'troubleshoot' },
             { name: '📈 Monitor Services', value: 'monitor' },
-            { name: '💰 Analyze Costs', value: 'cost' },
-            { name: '🔒 Security Audit', value: 'security' },
-            { name: '💾 Backup Operations', value: 'backup' },
             { name: '🤖 AI Assistant', value: 'ai' },
-            { name: '⚙️  Change Settings', value: 'settings' },
+            { name: '⚙️  Settings & Configuration', value: 'settings' },
+            { name: '🛠️  Management Mode (Create/Edit/Delete)', value: 'management' },
             { name: '🚪 Exit', value: 'exit' }
           ]
         }
@@ -48,29 +45,20 @@ export class InteractiveMode {
         case 'view':
           await this.viewResources();
           break;
-        case 'deploy':
-          await this.deployInfrastructure();
-          break;
         case 'troubleshoot':
           await this.troubleshootIssue();
           break;
         case 'monitor':
           await this.monitorServices();
           break;
-        case 'cost':
-          await this.analyzeCosts();
-          break;
-        case 'security':
-          await this.securityAudit();
-          break;
-        case 'backup':
-          await this.backupOperations();
-          break;
         case 'ai':
           await this.aiChat();
           break;
         case 'settings':
           await this.setupContext();
+          break;
+        case 'management':
+          await this.managementMode();
           break;
         case 'exit':
           exit = true;
@@ -121,7 +109,7 @@ export class InteractiveMode {
           { name: '🌐 Networks', value: 'network' },
           { name: '🗄️  Databases', value: 'database' },
           { name: '⚖️  Load Balancers', value: 'loadbalancer' },
-          { name: '🔙 Back', value: 'back' }
+          { name: '🔙 Back to Main Menu', value: 'back' }
         ]
       }
     ]);
@@ -197,33 +185,53 @@ export class InteractiveMode {
   }
 
   async aiChat() {
-    console.log(chalk.cyan('\n🤖 AI Assistant Mode (type "exit" to return)\n'));
+    console.log(chalk.cyan('\n🤖 AI Assistant Mode\n'));
     
     let chatting = true;
     while (chatting) {
-      const { question } = await inquirer.prompt([
+      const { action } = await inquirer.prompt([
         {
-          type: 'input',
-          name: 'question',
-          message: 'You:',
-          validate: input => input.length > 0 || 'Please enter a question'
+          type: 'list',
+          name: 'action',
+          message: 'AI Assistant Options:',
+          choices: [
+            { name: '💬 Ask a Question', value: 'question' },
+            { name: '📜 Generate Script', value: 'script' },
+            { name: '🔍 Analyze Infrastructure', value: 'analyze' },
+            { name: '🔙 Back to Main Menu', value: 'back' }
+          ]
         }
       ]);
 
-      if (question.toLowerCase() === 'exit') {
+      if (action === 'back') {
         chatting = false;
         continue;
       }
 
-      const spinner = ora('Thinking...').start();
-      
-      try {
-        const response = await this.aiAssistant.getRecommendation(question, this.context);
-        spinner.stop();
-        console.log(chalk.green('\nAssistant:'), response, '\n');
-      } catch (error) {
-        spinner.fail('Failed to get response');
-        console.error(chalk.red(error.message));
+      if (action === 'question') {
+        const { question } = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'question',
+            message: 'Your question:',
+            validate: input => input.length > 0 || 'Please enter a question'
+          }
+        ]);
+
+        const spinner = ora('Thinking...').start();
+        
+        try {
+          const response = await this.aiAssistant.getRecommendation(question, this.context);
+          spinner.stop();
+          console.log(chalk.green('\nAssistant:'), response, '\n');
+        } catch (error) {
+          spinner.fail('Failed to get response');
+          console.error(chalk.red(error.message));
+        }
+      } else if (action === 'script') {
+        console.log(chalk.yellow('\n📜 Script generation functionality would go here...\n'));
+      } else if (action === 'analyze') {
+        console.log(chalk.yellow('\n🔍 Infrastructure analysis functionality would go here...\n'));
       }
     }
   }
@@ -334,5 +342,87 @@ export class InteractiveMode {
 
     console.log(chalk.green(`\n${operation} operation selected`));
     console.log(chalk.yellow('Backup operation implementation would go here...\n'));
+  }
+
+  async managementMode() {
+    while (true) {
+      console.log(chalk.yellow('\n⚠️  MANAGEMENT MODE - You can create, modify, and delete resources'));
+      
+      const { action } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'action',
+          message: 'What management operation would you like to perform?',
+          choices: [
+            { name: '🚀 Deploy Infrastructure', value: 'deploy' },
+            { name: '💰 Analyze Costs', value: 'cost' },
+            { name: '🔒 Security Audit', value: 'security' },
+            { name: '💾 Backup Operations', value: 'backup' },
+            { name: '🔧 Create Resources', value: 'create' },
+            { name: '✏️  Modify Resources', value: 'modify' },
+            { name: '🗑️  Delete Resources', value: 'delete' },
+            { name: '🔙 Back to Read-only Mode', value: 'back' }
+          ]
+        }
+      ]);
+
+      if (action === 'back') {
+        break;
+      }
+
+      switch (action) {
+        case 'deploy':
+          await this.deployInfrastructure();
+          break;
+        case 'cost':
+          await this.analyzeCosts();
+          break;
+        case 'security':
+          await this.securityAudit();
+          break;
+        case 'backup':
+          await this.backupOperations();
+          break;
+        case 'create':
+          await this.createResource();
+          break;
+        case 'modify':
+          await this.modifyResource();
+          break;
+        case 'delete':
+          await this.deleteResource();
+          break;
+      }
+    }
+  }
+
+  async createResource() {
+    const { resourceType } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'resourceType',
+        message: 'What type of resource would you like to create?',
+        choices: [
+          { name: '🖥️  Compute Instance', value: 'instance' },
+          { name: '💾 Storage Bucket', value: 'bucket' },
+          { name: '🌐 VPC Network', value: 'network' },
+          { name: '🔙 Back', value: 'back' }
+        ]
+      }
+    ]);
+
+    if (resourceType === 'back') return;
+
+    console.log(chalk.green(`\nCreating ${resourceType}...`));
+    console.log(chalk.yellow('Resource creation implementation would go here...\n'));
+  }
+
+  async modifyResource() {
+    console.log(chalk.yellow('\n✏️  Resource modification functionality would go here...\n'));
+  }
+
+  async deleteResource() {
+    console.log(chalk.red('\n⚠️  Resource deletion functionality would go here...\n'));
+    console.log(chalk.yellow('This would include safety confirmations and backup recommendations.\n'));
   }
 }

@@ -33,11 +33,13 @@ export async function initConfig() {
   config.providers = providers;
 
   // Step 2: Configure each selected provider
+  let enableManagement = false;
   for (const provider of providers) {
     if (provider === 'gcp') {
-      const gcpConfig = await configureGCP();
-      if (gcpConfig) {
-        config.credentials.gcp = gcpConfig;
+      const gcpResult = await configureGCP();
+      if (gcpResult) {
+        config.credentials.gcp = gcpResult.gcpConfig;
+        enableManagement = gcpResult.enableManagement;
       } else {
         console.log(chalk.red('GCP configuration failed. Please try again.'));
         return;
@@ -53,11 +55,23 @@ export async function initConfig() {
   // Step 4: Save configuration
   await saveConfiguration(config);
 
-  console.log(chalk.green('\n✅ Rig CLI configured successfully!'));
-  console.log(chalk.cyan('\nYou can now use:'));
-  console.log(chalk.white('  rig cloud gcp --list'));
-  console.log(chalk.white('  rig interactive'));
-  console.log(chalk.white('  rig troubleshoot --issue "your issue"'));
+  if (enableManagement) {
+    console.log(chalk.green('\n✅ Rig CLI configured with management capabilities!'));
+    console.log(chalk.cyan('\nYou can now use:'));
+    console.log(chalk.white('  rig cloud gcp --list --type instances'));
+    console.log(chalk.white('  rig interactive                      # Full management mode'));
+    console.log(chalk.white('  rig troubleshoot --issue "your issue"'));
+    console.log(chalk.white('  rig monitor                          # Monitor resources'));
+    console.log(chalk.white('  rig security --audit                 # Security audits'));
+  } else {
+    console.log(chalk.green('\n✅ Rig CLI ready in read-only mode!'));
+    console.log(chalk.cyan('\nExploration commands:'));
+    console.log(chalk.white('  rig cloud gcp --list --type instances  # View VMs'));
+    console.log(chalk.white('  rig cloud gcp --list --type storage    # View storage'));
+    console.log(chalk.white('  rig interactive                       # Explore safely'));
+    console.log(chalk.white('  rig troubleshoot --issue "describe"    # Get help'));
+    console.log(chalk.gray('\n💡 Run "rig init" again to enable management capabilities'));
+  }
   console.log();
 }
 
@@ -74,14 +88,17 @@ async function configureGCP() {
 
   // Check current authentication status
   const authInfo = await gcloudAuth.getAuthInfo();
+  let projectId;
   
   if (authInfo.authenticated) {
     console.log(chalk.green(`✓ Already authenticated as: ${authInfo.account}`));
     
+    let useCurrentAuth = false;
+    
     if (authInfo.project) {
       console.log(chalk.green(`✓ Current project: ${authInfo.project}`));
       
-      const { useCurrentAuth } = await inquirer.prompt([
+      const authPrompt = await inquirer.prompt([
         {
           type: 'confirm',
           name: 'useCurrentAuth',
@@ -89,6 +106,8 @@ async function configureGCP() {
           default: true
         }
       ]);
+      
+      useCurrentAuth = authPrompt.useCurrentAuth;
 
       if (!useCurrentAuth) {
         const authenticated = await gcloudAuth.authenticate();
@@ -97,20 +116,33 @@ async function configureGCP() {
         }
       }
     }
+
+    // If user chose to use current auth and project, skip project selection
+    if (useCurrentAuth && authInfo.project) {
+      projectId = authInfo.project;
+      console.log(chalk.green(`✓ Using current project: ${projectId}`));
+    } else {
+      // Need to select project
+      console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
+      const projects = await gcloudAuth.getProjects();
+      
+      projectId = await gcloudAuth.selectProject(projects);
+      if (!projectId) {
+        return null;
+      }
+      await gcloudAuth.setProject(projectId);
+    }
   } else {
     // Not authenticated, start authentication flow
     const authenticated = await gcloudAuth.authenticate();
     if (!authenticated) {
       return null;
     }
-  }
 
-  // Get and select project
-  console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
-  const projects = await gcloudAuth.getProjects();
-  
-  let projectId = await gcloudAuth.getCurrentProject();
-  if (!projectId || projects.length > 1) {
+    // Get and select project after authentication
+    console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
+    const projects = await gcloudAuth.getProjects();
+    
     projectId = await gcloudAuth.selectProject(projects);
     if (!projectId) {
       return null;
@@ -118,21 +150,59 @@ async function configureGCP() {
     await gcloudAuth.setProject(projectId);
   }
 
-  // Select default region
-  const region = await gcloudAuth.selectRegion();
-
-  // Enable required APIs
-  const { enableAPIs } = await inquirer.prompt([
+  // Default to read-only mode
+  console.log(chalk.green('\n✅ Project connected in read-only mode'));
+  console.log(chalk.cyan('📖 You can explore the project safely without making changes'));
+  
+  // Ask if user wants to enable management capabilities
+  const { enableManagement } = await inquirer.prompt([
     {
       type: 'confirm',
-      name: 'enableAPIs',
-      message: 'Enable required GCP APIs? (Compute, Storage, Logging, etc.)',
-      default: true
+      name: 'enableManagement',
+      message: 'Do you want to enable resource management capabilities? (create/modify/delete resources)',
+      default: false
     }
   ]);
 
-  if (enableAPIs) {
-    await gcloudAuth.enableAPIs(projectId);
+  let region = 'us-central1'; // Default region
+  
+  if (enableManagement) {
+    console.log(chalk.yellow('\n⚠️  Enabling management mode - this will allow creating/modifying resources'));
+    
+    // Select default region
+    const regionChoice = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'selectRegion',
+        message: 'Do you want to select a specific default region?',
+        default: false
+      }
+    ]);
+    
+    if (regionChoice.selectRegion) {
+      region = await gcloudAuth.selectRegion();
+    } else {
+      console.log(chalk.green(`✓ Using default region: ${region}`));
+    }
+
+    // Enable required APIs for management
+    const { enableAPIs } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'enableAPIs',
+        message: 'Enable required GCP APIs for resource management? (Compute, Storage, etc.)',
+        default: true
+      }
+    ]);
+
+    if (enableAPIs) {
+      await gcloudAuth.enableAPIs(projectId);
+    }
+    
+    console.log(chalk.green('\n🔧 Management mode enabled'));
+  } else {
+    console.log(chalk.cyan('\n👀 Read-only mode active'));
+    console.log(chalk.gray('💡 You can enable management later by running: rig init'));
   }
 
   // Get final auth info
@@ -148,7 +218,7 @@ async function configureGCP() {
   // Save to .env
   await gcloudAuth.saveCredentials(gcpConfig);
 
-  return gcpConfig;
+  return { gcpConfig, enableManagement };
 }
 
 async function configureAI() {

@@ -1,1 +1,4 @@
 {"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T02:09:40.597Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T02:29:48.381Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T02:30:59.886Z"}
+{"level":"error","message":"Failed to list GCP storage: Command failed: gcloud storage buckets list --project=ai-innovation-portal --format=json\nERROR: (gcloud.storage.buckets.list) HTTPError 403: luis.villalobos@hatchworks.com does not have storage.buckets.list access to the Google Cloud project. Permission 'storage.buckets.list' denied on resource (or it may not exist). This command is authenticated as luis.villalobos@hatchworks.com which is the active account specified by the [core/account] property.\n","timestamp":"2025-08-22T02:31:51.233Z"}
