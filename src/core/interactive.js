@@ -18,7 +18,7 @@ export class InteractiveMode {
   }
 
   async start() {
-    console.log(chalk.green('\n🤖 Welcome to DevOps Interactive Assistant!\n'));
+    console.log(chalk.green('\n🤖 Welcome to Rig Interactive Assistant!\n'));
     
     await this.setupContext();
     
@@ -78,7 +78,7 @@ export class InteractiveMode {
       }
     }
 
-    console.log(chalk.yellow('\n👋 Goodbye! Happy DevOps-ing!\n'));
+    console.log(chalk.yellow('\n👋 Goodbye! Happy rigging!\n'));
   }
 
   async setupContext() {

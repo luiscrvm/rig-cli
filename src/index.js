@@ -14,16 +14,16 @@ config();
 const program = new Command();
 const logger = new Logger();
 
-console.log(chalk.cyan(figlet.textSync('DevOps CLI', { horizontalLayout: 'full' })));
+console.log(chalk.cyan(figlet.textSync('Rig CLI', { horizontalLayout: 'full' })));
 
 program
-  .name('devops')
-  .description('AI-powered DevOps CLI for cloud infrastructure management')
+  .name('rig')
+  .description('AI-powered Rig CLI for cloud infrastructure management')
   .version('1.0.0');
 
 program
   .command('init')
-  .description('Initialize DevOps CLI configuration')
+  .description('Initialize Rig CLI configuration')
   .action(async () => {
     const { initConfig } = await import('./commands/init.js');
     await initConfig();
@@ -76,7 +76,7 @@ program
 program
   .command('interactive')
   .alias('i')
-  .description('Start interactive DevOps assistant mode')
+  .description('Start interactive Rig assistant mode')
   .action(async () => {
     const interactive = new InteractiveMode();
     await interactive.start();

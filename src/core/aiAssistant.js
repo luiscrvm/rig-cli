@@ -1,21 +1,28 @@
 import axios from 'axios';
 import { Logger } from '../utils/logger.js';
+import { OllamaAI } from './ollamaAI.js';
 
 export class AIAssistant {
   constructor() {
     this.logger = new Logger();
+    this.provider = process.env.AI_PROVIDER || 'ollama';
     this.apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
-    this.provider = process.env.AI_PROVIDER || 'openai';
     this.context = [];
+    
+    if (this.provider === 'ollama') {
+      this.ollama = new OllamaAI();
+    }
   }
 
   async getRecommendation(issue, context = {}) {
-    const prompt = this.buildPrompt(issue, context);
-    
     try {
-      if (this.provider === 'openai') {
+      if (this.provider === 'ollama') {
+        return await this.ollama.analyzeInfrastructure(issue, context);
+      } else if (this.provider === 'openai') {
+        const prompt = this.buildPrompt(issue, context);
         return await this.callOpenAI(prompt);
       } else if (this.provider === 'anthropic') {
+        const prompt = this.buildPrompt(issue, context);
         return await this.callAnthropic(prompt);
       } else {
         return this.getLocalRecommendation(issue, context);
@@ -181,6 +188,10 @@ export class AIAssistant {
   }
 
   async generateScript(task, provider, language = 'bash') {
+    if (this.provider === 'ollama') {
+      return await this.ollama.generateScript(task, language);
+    }
+    
     const templates = {
       'backup-database': {
         bash: `#!/bin/bash

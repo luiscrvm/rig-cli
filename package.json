@@ -1,11 +1,11 @@
 {
-  "name": "devops-assistant-cli",
+  "name": "rig-cli",
   "version": "1.0.0",
-  "description": "AI-powered DevOps CLI tool for cloud infrastructure management",
+  "description": "AI-powered Rig CLI tool for cloud infrastructure management",
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "devops": "./src/index.js"
+    "rig": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js",

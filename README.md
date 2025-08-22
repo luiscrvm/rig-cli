@@ -1,13 +1,13 @@
-# DevOps Assistant CLI
+# Rig CLI
 
-An AI-powered CLI tool designed to help DevOps engineers manage cloud infrastructure across AWS, GCP, and Azure. This tool provides intelligent assistance for troubleshooting, monitoring, deployment, and infrastructure management.
+An AI-powered CLI tool designed to help engineers manage cloud infrastructure across AWS, GCP, and Azure. This tool provides intelligent assistance for troubleshooting, monitoring, deployment, and infrastructure management.
 
 ## Features
 
 ### 🚀 Core Capabilities
 - **Multi-Cloud Support**: Seamless management across AWS, GCP, and Azure
 - **AI-Powered Assistance**: Intelligent troubleshooting and recommendations
-- **Interactive Mode**: Guided DevOps operations with intuitive prompts
+- **Interactive Mode**: Guided operations with intuitive prompts
 - **Real-time Monitoring**: Track infrastructure health and metrics
 - **Cost Analysis**: Monitor and optimize cloud spending
 - **Security Auditing**: Automated security checks and compliance monitoring
@@ -15,7 +15,7 @@ An AI-powered CLI tool designed to help DevOps engineers manage cloud infrastruc
 
 ### 🤖 AI Integration
 - **Smart Troubleshooting**: AI analyzes issues and provides step-by-step solutions
-- **Best Practice Recommendations**: Get suggestions based on DevOps best practices
+- **Best Practice Recommendations**: Get suggestions based on infrastructure best practices
 - **Script Generation**: Automatically generate scripts for common tasks
 - **Root Cause Analysis**: Deep dive into infrastructure problems
 
@@ -24,7 +24,7 @@ An AI-powered CLI tool designed to help DevOps engineers manage cloud infrastruc
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd devops-cli
+cd rig-cli
 
 # Install dependencies
 npm install
@@ -33,7 +33,7 @@ npm install
 npm link
 
 # Initialize configuration
-devops init
+rig init
 ```
 
 ## Quick Start
@@ -41,7 +41,7 @@ devops init
 ### 1. Initial Setup
 ```bash
 # Configure your cloud providers and AI assistant
-devops init
+rig init
 
 # This will prompt you to:
 # - Select cloud providers (AWS/GCP/Azure)
@@ -52,42 +52,42 @@ devops init
 ### 2. Interactive Mode
 ```bash
 # Start the interactive assistant
-devops interactive
+rig interactive
 
 # Or use the shorthand
-devops i
+rig i
 ```
 
 ### 3. Quick Commands
 ```bash
 # List AWS EC2 instances
-devops cloud aws --list --type instances --region us-east-1
+rig cloud aws --list --type instances --region us-east-1
 
 # Troubleshoot an issue with AI assistance
-devops troubleshoot --issue "database connection timeout" --suggest
+rig troubleshoot --issue "database connection timeout" --suggest
 
 # Monitor services
-devops monitor --metrics
+rig monitor --metrics
 
 # Run security audit
-devops security --audit
+rig security --audit
 ```
 
 ## Command Reference
 
-### `devops init`
+### `rig init`
 Initialize and configure the CLI tool
 ```bash
-devops init
+rig init
 ```
 
-### `devops cloud <provider>`
+### `rig cloud <provider>`
 Manage cloud resources
 ```bash
 # List resources
-devops cloud aws --list --type instances --region us-east-1
-devops cloud gcp --list --type storage
-devops cloud azure --list
+rig cloud aws --list --type instances --region us-east-1
+rig cloud gcp --list --type storage
+rig cloud azure --list
 
 # Supported resource types:
 # - instances (VMs/EC2)
@@ -96,83 +96,83 @@ devops cloud azure --list
 # - database (RDS/Cloud SQL)
 ```
 
-### `devops deploy`
+### `rig deploy`
 Deploy infrastructure from configuration
 ```bash
 # Deploy from config file
-devops deploy --file infrastructure.yaml --env production
+rig deploy --file infrastructure.yaml --env production
 
 # Dry run to preview changes
-devops deploy --file config.json --dry-run
+rig deploy --file config.json --dry-run
 ```
 
-### `devops monitor`
+### `rig monitor`
 Monitor infrastructure health
 ```bash
 # Show all services
-devops monitor
+rig monitor
 
 # Monitor specific service with metrics
-devops monitor --service webserver --metrics
+rig monitor --service webserver --metrics
 
 # Show active alerts
-devops monitor --alerts
+rig monitor --alerts
 ```
 
-### `devops troubleshoot`
+### `rig troubleshoot`
 AI-assisted troubleshooting
 ```bash
 # Interactive troubleshooting
-devops troubleshoot
+rig troubleshoot
 
 # Direct issue analysis
-devops troubleshoot --issue "high CPU usage on production server"
+rig troubleshoot --issue "high CPU usage on production server"
 
 # Analyze logs
-devops troubleshoot --logs
+rig troubleshoot --logs
 
 # Get AI suggestions
-devops troubleshoot --issue "deployment failed" --suggest
+rig troubleshoot --issue "deployment failed" --suggest
 ```
 
-### `devops backup`
+### `rig backup`
 Backup and restore operations
 ```bash
 # Create backup
-devops backup --create
+rig backup --create
 
 # List backups
-devops backup --list
+rig backup --list
 
 # Restore from backup
-devops backup --restore backup-id-123
+rig backup --restore backup-id-123
 ```
 
-### `devops security`
+### `rig security`
 Security audit and compliance
 ```bash
 # Run security audit
-devops security --audit
+rig security --audit
 
 # Check compliance
-devops security --compliance CIS
-devops security --compliance PCI
+rig security --compliance CIS
+rig security --compliance PCI
 
 # Auto-fix security issues
-devops security --fix
+rig security --fix
 ```
 
-### `devops cost`
+### `rig cost`
 Cost analysis and optimization
 ```bash
 # Analyze current costs
-devops cost --analyze
+rig cost --analyze
 
 # Get optimization recommendations
-devops cost --optimize
+rig cost --optimize
 
 # Set budget alerts
-devops cost --budget 5000
+rig cost --budget 5000
 ```
 
 ## Configuration
@@ -202,7 +202,7 @@ AI_PROVIDER=anthropic
 ANTHROPIC_API_KEY=your_api_key
 ```
 
-### Config File (~/.devops-cli/config.json)
+### Config File (~/.rig-cli/config.json)
 ```json
 {
   "providers": ["AWS", "GCP", "Azure"],
@@ -218,71 +218,71 @@ ANTHROPIC_API_KEY=your_api_key
 Help new team members quickly understand and manage infrastructure:
 ```bash
 # Start interactive mode for guided experience
-devops interactive
+rig interactive
 
 # View all resources in the current environment
-devops cloud aws --list
+rig cloud aws --list
 
 # Get help with specific issues
-devops troubleshoot --issue "how to connect to production database"
+rig troubleshoot --issue "how to connect to production database"
 ```
 
 ### 2. Incident Response
 Quickly diagnose and resolve production issues:
 ```bash
 # Analyze the issue with AI
-devops troubleshoot --issue "website is down" --logs --suggest
+rig troubleshoot --issue "website is down" --logs --suggest
 
 # Monitor affected services
-devops monitor --service webserver --metrics
+rig monitor --service webserver --metrics
 
 # Check recent changes
-devops cloud aws --list --type instances --region us-east-1
+rig cloud aws --list --type instances --region us-east-1
 ```
 
 ### 3. Cost Optimization
 Identify and reduce unnecessary cloud spending:
 ```bash
 # Analyze current costs
-devops cost --analyze
+rig cost --analyze
 
 # Get AI recommendations
-devops cost --optimize
+rig cost --optimize
 
 # Set up budget alerts
-devops cost --budget 10000
+rig cost --budget 10000
 ```
 
 ### 4. Security Compliance
 Ensure infrastructure meets security standards:
 ```bash
 # Run comprehensive audit
-devops security --audit
+rig security --audit
 
 # Check specific compliance
-devops security --compliance HIPAA
+rig security --compliance HIPAA
 
 # Auto-fix issues
-devops security --fix
+rig security --fix
 ```
 
 ### 5. Disaster Recovery
 Manage backups and recovery procedures:
 ```bash
 # Create backup before major changes
-devops backup --create
+rig backup --create
 
 # List available backups
-devops backup --list
+rig backup --list
 
 # Restore if needed
-devops backup --restore backup-2024-01-20
+rig backup --restore backup-2024-01-20
 ```
 
 ## Architecture
 
 ```
-devops-cli/
+rig-cli/
 ├── src/
 │   ├── index.js           # Main CLI entry point
 │   ├── commands/          # CLI command implementations
@@ -314,7 +314,7 @@ devops-cli/
 
 ### Local Mode (No API Required)
 The tool includes a local AI mode that provides recommendations based on:
-- Common DevOps patterns and best practices
+- Common infrastructure patterns and best practices
 - Pre-configured troubleshooting workflows
 - Template-based script generation
 - Rule-based issue categorization
@@ -329,7 +329,7 @@ When configured with OpenAI or Anthropic:
 
 ## Best Practices
 
-1. **Always run `devops init` first** to properly configure credentials
+1. **Always run `rig init` first** to properly configure credentials
 2. **Use interactive mode** when learning or exploring features
 3. **Enable logging** for audit trails and debugging
 4. **Regular backups** before major infrastructure changes
@@ -344,7 +344,7 @@ When configured with OpenAI or Anthropic:
 1. **Authentication Errors**
    ```bash
    # Reconfigure credentials
-   devops init
+   rig init
    ```
 
 2. **Permission Denied**
@@ -398,4 +398,4 @@ MIT License - See LICENSE file for details
 
 ---
 
-Built with ❤️ for the DevOps community
+Built with ❤️ for the infrastructure community

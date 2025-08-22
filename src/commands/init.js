@@ -3,216 +3,311 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import os from 'os';
+import ora from 'ora';
+import { GCloudAuth } from '../auth/gcloudAuth.js';
+import { OllamaAI } from '../core/ollamaAI.js';
 
 export async function initConfig() {
-  console.log(chalk.cyan('\n🚀 DevOps CLI Configuration\n'));
+  console.log(chalk.cyan('\n🚀 Rig CLI Configuration\n'));
 
-  const answers = await inquirer.prompt([
+  const config = {
+    providers: [],
+    credentials: {}
+  };
+
+  // Step 1: Select cloud providers
+  const { providers } = await inquirer.prompt([
     {
       type: 'checkbox',
       name: 'providers',
       message: 'Select cloud providers to configure:',
-      choices: ['AWS', 'GCP', 'Azure'],
-      validate: (input) => input.length > 0 || 'Please select at least one provider'
-    },
-    {
-      type: 'list',
-      name: 'aiProvider',
-      message: 'Select AI assistant provider:',
       choices: [
-        { name: 'OpenAI (GPT-4)', value: 'openai' },
-        { name: 'Anthropic (Claude)', value: 'anthropic' },
-        { name: 'Local (No API needed)', value: 'local' }
-      ]
+        { name: 'GCP (Google Cloud Platform)', value: 'gcp' },
+        { name: 'AWS (Coming Soon)', value: 'aws', disabled: true },
+        { name: 'Azure (Coming Soon)', value: 'azure', disabled: true }
+      ],
+      validate: input => input.length > 0 || 'Please select at least one provider'
     }
   ]);
 
-  const config = {
-    providers: answers.providers,
-    aiProvider: answers.aiProvider,
-    credentials: {}
-  };
+  config.providers = providers;
 
-  for (const provider of answers.providers) {
-    console.log(chalk.yellow(`\nConfiguring ${provider}:`));
-    
-    if (provider === 'AWS') {
-      const awsCreds = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'accessKeyId',
-          message: 'AWS Access Key ID:',
-          validate: input => input.length > 0 || 'Access Key ID is required'
-        },
-        {
-          type: 'password',
-          name: 'secretAccessKey',
-          message: 'AWS Secret Access Key:',
-          mask: '*',
-          validate: input => input.length > 0 || 'Secret Access Key is required'
-        },
-        {
-          type: 'input',
-          name: 'region',
-          message: 'Default AWS Region:',
-          default: 'us-east-1'
-        }
-      ]);
-      config.credentials.aws = awsCreds;
-    }
-
-    if (provider === 'GCP') {
-      const gcpCreds = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'projectId',
-          message: 'GCP Project ID:',
-          validate: input => input.length > 0 || 'Project ID is required'
-        },
-        {
-          type: 'input',
-          name: 'keyFile',
-          message: 'Path to service account key file:',
-          validate: input => {
-            if (!input) return 'Key file path is required';
-            if (!fs.existsSync(input)) return 'File does not exist';
-            return true;
-          }
-        }
-      ]);
-      config.credentials.gcp = gcpCreds;
-    }
-
-    if (provider === 'Azure') {
-      const azureCreds = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'subscriptionId',
-          message: 'Azure Subscription ID:',
-          validate: input => input.length > 0 || 'Subscription ID is required'
-        },
-        {
-          type: 'input',
-          name: 'tenantId',
-          message: 'Azure Tenant ID:',
-          validate: input => input.length > 0 || 'Tenant ID is required'
-        },
-        {
-          type: 'input',
-          name: 'clientId',
-          message: 'Azure Client ID:',
-          validate: input => input.length > 0 || 'Client ID is required'
-        },
-        {
-          type: 'password',
-          name: 'clientSecret',
-          message: 'Azure Client Secret:',
-          mask: '*',
-          validate: input => input.length > 0 || 'Client Secret is required'
-        }
-      ]);
-      config.credentials.azure = azureCreds;
-    }
-  }
-
-  if (answers.aiProvider !== 'local') {
-    console.log(chalk.yellow(`\nConfiguring ${answers.aiProvider} AI:`));
-    
-    const aiCreds = await inquirer.prompt([
-      {
-        type: 'password',
-        name: 'apiKey',
-        message: `${answers.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key:`,
-        mask: '*',
-        validate: input => input.length > 0 || 'API Key is required'
+  // Step 2: Configure each selected provider
+  for (const provider of providers) {
+    if (provider === 'gcp') {
+      const gcpConfig = await configureGCP();
+      if (gcpConfig) {
+        config.credentials.gcp = gcpConfig;
+      } else {
+        console.log(chalk.red('GCP configuration failed. Please try again.'));
+        return;
       }
-    ]);
-    config.credentials.ai = aiCreds;
-  }
-
-  const { saveLocation } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'saveLocation',
-      message: 'Where to save configuration?',
-      choices: [
-        { name: 'Environment file (.env)', value: 'env' },
-        { name: 'Config file (devops-config.json)', value: 'json' },
-        { name: 'Both', value: 'both' }
-      ]
     }
-  ]);
-
-  if (saveLocation === 'env' || saveLocation === 'both') {
-    await saveEnvFile(config);
+    // AWS and Azure configuration will be added later
   }
 
-  if (saveLocation === 'json' || saveLocation === 'both') {
-    await saveJsonConfig(config);
-  }
+  // Step 3: Configure AI provider
+  const aiConfig = await configureAI();
+  config.credentials.ai = aiConfig;
 
-  console.log(chalk.green('\n✅ Configuration saved successfully!'));
-  console.log(chalk.cyan('\nYou can now use the DevOps CLI with:'));
-  console.log(chalk.white('  devops cloud aws --list'));
-  console.log(chalk.white('  devops interactive'));
-  console.log(chalk.white('  devops troubleshoot --issue "connection timeout"'));
+  // Step 4: Save configuration
+  await saveConfiguration(config);
+
+  console.log(chalk.green('\n✅ Rig CLI configured successfully!'));
+  console.log(chalk.cyan('\nYou can now use:'));
+  console.log(chalk.white('  rig cloud gcp --list'));
+  console.log(chalk.white('  rig interactive'));
+  console.log(chalk.white('  rig troubleshoot --issue "your issue"'));
   console.log();
 }
 
-async function saveEnvFile(config) {
-  let envContent = '# DevOps CLI Configuration\n\n';
+async function configureGCP() {
+  console.log(chalk.yellow('\n📋 Configuring Google Cloud Platform\n'));
 
-  if (config.credentials.aws) {
-    envContent += '# AWS Configuration\n';
-    envContent += `AWS_ACCESS_KEY_ID=${config.credentials.aws.accessKeyId}\n`;
-    envContent += `AWS_SECRET_ACCESS_KEY=${config.credentials.aws.secretAccessKey}\n`;
-    envContent += `AWS_DEFAULT_REGION=${config.credentials.aws.region}\n\n`;
+  const gcloudAuth = new GCloudAuth();
+
+  // Check if gcloud is installed
+  const isInstalled = await gcloudAuth.checkGCloudInstalled();
+  if (!isInstalled) {
+    return null;
   }
 
-  if (config.credentials.gcp) {
-    envContent += '# GCP Configuration\n';
-    envContent += `GCP_PROJECT_ID=${config.credentials.gcp.projectId}\n`;
-    envContent += `GOOGLE_APPLICATION_CREDENTIALS=${config.credentials.gcp.keyFile}\n\n`;
-  }
+  // Check current authentication status
+  const authInfo = await gcloudAuth.getAuthInfo();
+  
+  if (authInfo.authenticated) {
+    console.log(chalk.green(`✓ Already authenticated as: ${authInfo.account}`));
+    
+    if (authInfo.project) {
+      console.log(chalk.green(`✓ Current project: ${authInfo.project}`));
+      
+      const { useCurrentAuth } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'useCurrentAuth',
+          message: 'Use current authentication and project?',
+          default: true
+        }
+      ]);
 
-  if (config.credentials.azure) {
-    envContent += '# Azure Configuration\n';
-    envContent += `AZURE_SUBSCRIPTION_ID=${config.credentials.azure.subscriptionId}\n`;
-    envContent += `AZURE_TENANT_ID=${config.credentials.azure.tenantId}\n`;
-    envContent += `AZURE_CLIENT_ID=${config.credentials.azure.clientId}\n`;
-    envContent += `AZURE_CLIENT_SECRET=${config.credentials.azure.clientSecret}\n\n`;
-  }
-
-  if (config.credentials.ai) {
-    envContent += '# AI Configuration\n';
-    envContent += `AI_PROVIDER=${config.aiProvider}\n`;
-    if (config.aiProvider === 'openai') {
-      envContent += `OPENAI_API_KEY=${config.credentials.ai.apiKey}\n`;
-    } else {
-      envContent += `ANTHROPIC_API_KEY=${config.credentials.ai.apiKey}\n`;
+      if (!useCurrentAuth) {
+        const authenticated = await gcloudAuth.authenticate();
+        if (!authenticated) {
+          return null;
+        }
+      }
+    }
+  } else {
+    // Not authenticated, start authentication flow
+    const authenticated = await gcloudAuth.authenticate();
+    if (!authenticated) {
+      return null;
     }
   }
 
-  const envPath = path.join(process.cwd(), '.env');
-  fs.writeFileSync(envPath, envContent);
-  console.log(chalk.green(`  ✓ Created .env file`));
+  // Get and select project
+  console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
+  const projects = await gcloudAuth.getProjects();
+  
+  let projectId = await gcloudAuth.getCurrentProject();
+  if (!projectId || projects.length > 1) {
+    projectId = await gcloudAuth.selectProject(projects);
+    if (!projectId) {
+      return null;
+    }
+    await gcloudAuth.setProject(projectId);
+  }
+
+  // Select default region
+  const region = await gcloudAuth.selectRegion();
+
+  // Enable required APIs
+  const { enableAPIs } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableAPIs',
+      message: 'Enable required GCP APIs? (Compute, Storage, Logging, etc.)',
+      default: true
+    }
+  ]);
+
+  if (enableAPIs) {
+    await gcloudAuth.enableAPIs(projectId);
+  }
+
+  // Get final auth info
+  const finalAuthInfo = await gcloudAuth.getAuthInfo();
+
+  const gcpConfig = {
+    projectId,
+    region,
+    account: finalAuthInfo.account,
+    authenticated: true
+  };
+
+  // Save to .env
+  await gcloudAuth.saveCredentials(gcpConfig);
+
+  return gcpConfig;
 }
 
-async function saveJsonConfig(config) {
-  const configPath = path.join(os.homedir(), '.devops-cli', 'config.json');
-  const configDir = path.dirname(configPath);
+async function configureAI() {
+  console.log(chalk.yellow('\n🤖 Configuring AI Assistant\n'));
+
+  const { aiProvider } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'aiProvider',
+      message: 'Select AI provider:',
+      choices: [
+        { name: 'Ollama (Local, Free)', value: 'ollama' },
+        { name: 'OpenAI GPT-4', value: 'openai' },
+        { name: 'Anthropic Claude', value: 'anthropic' },
+        { name: 'None (Manual mode only)', value: 'none' }
+      ]
+    }
+  ]);
+
+  const config = { provider: aiProvider };
+
+  if (aiProvider === 'ollama') {
+    const ollama = new OllamaAI();
+    const isRunning = await ollama.checkOllamaInstalled();
+    
+    if (isRunning) {
+      console.log(chalk.green('✓ Ollama is running'));
+      
+      const models = await ollama.getAvailableModels();
+      if (models.length === 0) {
+        console.log(chalk.yellow('\nNo models found. You need to pull a model first.'));
+        console.log(chalk.cyan('Recommended models:'));
+        console.log('  • llama3.2:3b - Fast and efficient (2GB)');
+        console.log('  • mistral:7b - Balanced performance (4GB)');
+        console.log('  • qwen2.5-coder:7b - Optimized for code (4GB)\n');
+        
+        const { pullModel } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'pullModel',
+            message: 'Would you like to pull a model now?',
+            default: true
+          }
+        ]);
+
+        if (pullModel) {
+          const { modelName } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'modelName',
+              message: 'Select model to pull:',
+              choices: [
+                { name: 'llama3.2:3b (2GB, fastest)', value: 'llama3.2:3b' },
+                { name: 'mistral:7b (4GB, balanced)', value: 'mistral:7b' },
+                { name: 'qwen2.5-coder:7b (4GB, best for code)', value: 'qwen2.5-coder:7b' },
+                { name: 'mixtral:8x7b (26GB, most capable)', value: 'mixtral:8x7b' }
+              ]
+            }
+          ]);
+
+          await ollama.pullModel(modelName);
+          config.model = modelName;
+        }
+      } else {
+        console.log(chalk.green(`✓ Found ${models.length} model(s)`));
+        
+        const { selectedModel } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'selectedModel',
+            message: 'Select default model:',
+            choices: models.map(m => ({
+              name: `${m.name} (${formatBytes(m.size)})`,
+              value: m.name
+            }))
+          }
+        ]);
+        
+        config.model = selectedModel;
+      }
+    } else {
+      console.log(chalk.yellow('\n⚠️  Ollama is not running.'));
+      console.log(chalk.cyan('To use Ollama:'));
+      console.log('  1. Install from: https://ollama.ai');
+      console.log('  2. Run: ollama serve');
+      console.log('  3. Pull a model: ollama pull llama3.2:3b\n');
+    }
+  } else if (aiProvider === 'openai') {
+    const { apiKey } = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'apiKey',
+        message: 'Enter OpenAI API key:',
+        mask: '*',
+        validate: input => input.length > 0 || 'API key is required'
+      }
+    ]);
+    config.apiKey = apiKey;
+  } else if (aiProvider === 'anthropic') {
+    const { apiKey } = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'apiKey',
+        message: 'Enter Anthropic API key:',
+        mask: '*',
+        validate: input => input.length > 0 || 'API key is required'
+      }
+    ]);
+    config.apiKey = apiKey;
+  }
+
+  return config;
+}
+
+async function saveConfiguration(config) {
+  // Save to home directory config
+  const configDir = path.join(os.homedir(), '.rig-cli');
+  const configPath = path.join(configDir, 'config.json');
 
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  const sanitizedConfig = {
+  const configData = {
     providers: config.providers,
-    aiProvider: config.aiProvider,
+    aiProvider: config.credentials.ai.provider,
     configured: true,
     configuredAt: new Date().toISOString()
   };
 
-  fs.writeFileSync(configPath, JSON.stringify(sanitizedConfig, null, 2));
-  console.log(chalk.green(`  ✓ Created config file at ${configPath}`));
+  fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+
+  // Update .env file
+  const envPath = path.join(process.cwd(), '.env');
+  let envContent = '';
+
+  if (fs.existsSync(envPath)) {
+    envContent = fs.readFileSync(envPath, 'utf8');
+  }
+
+  // Add AI configuration to .env
+  if (config.credentials.ai.provider === 'ollama') {
+    envContent += `\n# AI Configuration\nAI_PROVIDER=ollama\n`;
+    if (config.credentials.ai.model) {
+      envContent += `OLLAMA_MODEL=${config.credentials.ai.model}\n`;
+    }
+  } else if (config.credentials.ai.provider === 'openai') {
+    envContent += `\n# AI Configuration\nAI_PROVIDER=openai\nOPENAI_API_KEY=${config.credentials.ai.apiKey}\n`;
+  } else if (config.credentials.ai.provider === 'anthropic') {
+    envContent += `\n# AI Configuration\nAI_PROVIDER=anthropic\nANTHROPIC_API_KEY=${config.credentials.ai.apiKey}\n`;
+  }
+
+  fs.writeFileSync(envPath, envContent.trim() + '\n');
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
