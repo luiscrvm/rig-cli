@@ -12,6 +12,9 @@ export class AIAssistant {
     if (this.provider === 'ollama') {
       this.ollama = new OllamaAI();
     }
+    
+    // Log the current AI provider configuration
+    this.logger.info(`AI Provider configured: ${this.provider}`);
   }
 
   async getRecommendation(issue, context = {}) {
@@ -54,36 +57,75 @@ export class AIAssistant {
   }
 
   async callOpenAI(prompt) {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a DevOps expert assistant.' },
-        { role: 'user', content: prompt }
-      ]
-    }, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    try {
+      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are Rig, an expert infrastructure and DevOps assistant. Help with GCP, AWS, Azure, Kubernetes, Docker, CI/CD, and infrastructure as code. Provide concise, practical advice focusing on best practices and security.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 180000 // 3 minutes timeout
+      });
 
-    return response.data.choices[0].message.content;
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        this.logger.error('OpenAI API key is invalid or expired');
+        throw new Error('Invalid OpenAI API key. Please check your credentials.');
+      } else if (error.response?.status === 400) {
+        const errorMsg = error.response?.data?.error?.message || 'Bad request';
+        this.logger.error(`OpenAI API error (400): ${errorMsg}`);
+        throw new Error(`OpenAI API error: ${errorMsg}. The model '${process.env.OPENAI_MODEL || 'gpt-4o-mini'}' may not be available. Try setting OPENAI_MODEL=gpt-4o-mini in your .env file.`);
+      } else if (error.message.includes('timeout')) {
+        this.logger.error('OpenAI request timed out');
+        throw new Error('Request timed out. Please try again.');
+      } else {
+        this.logger.error(`OpenAI API error: ${error.message}`);
+        throw error;
+      }
+    }
   }
 
   async callAnthropic(prompt) {
-    const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-3-opus-20240229',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000
-    }, {
-      headers: {
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
-      }
-    });
+    try {
+      const response = await axios.post('https://api.anthropic.com/v1/messages', {
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
+        messages: [{ 
+          role: 'user', 
+          content: prompt 
+        }],
+        system: 'You are Rig, an expert infrastructure and DevOps assistant. Help with GCP, AWS, Azure, Kubernetes, Docker, CI/CD, and infrastructure as code. Provide concise, practical advice focusing on best practices and security.',
+        max_tokens: 2000,
+        temperature: 0.7
+      }, {
+        headers: {
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        timeout: 180000 // 3 minutes timeout
+      });
 
-    return response.data.content[0].text;
+      return response.data.content[0].text;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        this.logger.error('Anthropic API key is invalid or expired');
+        throw new Error('Invalid Anthropic API key. Please check your credentials.');
+      } else if (error.message.includes('timeout')) {
+        this.logger.error('Anthropic request timed out');
+        throw new Error('Request timed out. Please try again.');
+      } else {
+        this.logger.error(`Anthropic API error: ${error.message}`);
+        throw error;
+      }
+    }
   }
 
   getLocalRecommendation(issue, context) {
@@ -187,9 +229,51 @@ export class AIAssistant {
     return 'connection';
   }
 
+  async checkHealth() {
+    try {
+      if (this.provider === 'ollama') {
+        return await this.ollama.checkOllamaHealth();
+      } else if (this.provider === 'openai') {
+        // Simple check to verify API key validity
+        if (!this.apiKey) {
+          throw new Error('OpenAI API key not configured');
+        }
+        return true;
+      } else if (this.provider === 'anthropic') {
+        // Simple check to verify API key validity
+        if (!this.apiKey) {
+          throw new Error('Anthropic API key not configured');
+        }
+        return true;
+      }
+      return true;
+    } catch (error) {
+      this.logger.error(`AI health check failed: ${error.message}`);
+      return false;
+    }
+  }
+
   async generateScript(task, provider, language = 'bash') {
     if (this.provider === 'ollama') {
       return await this.ollama.generateScript(task, language);
+    } else if (this.provider === 'openai' || this.provider === 'anthropic') {
+      const prompt = `Generate a ${language} script for the following infrastructure task:
+${task}
+
+Requirements:
+- Include error handling
+- Add helpful comments
+- Follow best practices
+- Make it production-ready
+- Use gcloud CLI commands where appropriate
+
+Provide only the script code without explanations.`;
+      
+      if (this.provider === 'openai') {
+        return await this.callOpenAI(prompt);
+      } else {
+        return await this.callAnthropic(prompt);
+      }
     }
     
     const templates = {

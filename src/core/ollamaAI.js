@@ -26,6 +26,18 @@ export class OllamaAI {
     }
   }
 
+  async checkOllamaHealth() {
+    try {
+      await axios.get(`${this.baseURL}/api/tags`, { timeout: 5000 });
+      return true;
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        throw new Error('Ollama service is not running. Please start it with: ollama serve');
+      }
+      throw new Error(`Ollama health check failed: ${error.message}`);
+    }
+  }
+
   async getAvailableModels() {
     try {
       const response = await axios.get(`${this.baseURL}/api/tags`);
@@ -138,6 +150,9 @@ export class OllamaAI {
 You help with GCP, AWS, and Azure cloud platforms, Kubernetes, Docker, CI/CD, and infrastructure as code.
 Provide concise, practical advice and solutions. Focus on best practices and security.`;
 
+      // Check if Ollama is responding first
+      await this.checkOllamaHealth();
+
       const response = await axios.post(
         `${this.baseURL}/api/generate`,
         {
@@ -148,18 +163,28 @@ Provide concise, practical advice and solutions. Focus on best practices and sec
           options: {
             temperature: 0.7,
             top_p: 0.9,
-            max_tokens: 2000
+            max_tokens: 2000,
+            num_predict: 2000,
+            num_ctx: 4096
           }
         },
         {
-          timeout: 60000 // 60 second timeout
+          timeout: 180000 // Increased to 3 minutes
         }
       );
 
       return response.data.response;
     } catch (error) {
-      this.logger.error(`Ollama generation failed: ${error.message}`);
-      throw error;
+      if (error.code === 'ECONNREFUSED') {
+        this.logger.error('Ollama is not running. Please start Ollama with: ollama serve');
+        throw new Error('Ollama service is not running. Please start it with: ollama serve');
+      } else if (error.message.includes('timeout')) {
+        this.logger.error('Ollama request timed out. The model might be too large or busy.');
+        throw new Error('Request timed out. Try using a smaller model or wait for current requests to complete.');
+      } else {
+        this.logger.error(`Ollama generation failed: ${error.message}`);
+        throw error;
+      }
     }
   }
 
@@ -172,6 +197,9 @@ Provide concise, practical advice and solutions. Focus on best practices and sec
     }
 
     try {
+      // Check if Ollama is responding first
+      await this.checkOllamaHealth();
+
       const response = await axios.post(
         `${this.baseURL}/api/chat`,
         {
@@ -180,18 +208,28 @@ Provide concise, practical advice and solutions. Focus on best practices and sec
           stream: false,
           options: {
             temperature: 0.7,
-            top_p: 0.9
+            top_p: 0.9,
+            num_predict: 2000,
+            num_ctx: 4096
           }
         },
         {
-          timeout: 60000
+          timeout: 180000 // Increased to 3 minutes
         }
       );
 
       return response.data.message.content;
     } catch (error) {
-      this.logger.error(`Ollama chat failed: ${error.message}`);
-      throw error;
+      if (error.code === 'ECONNREFUSED') {
+        this.logger.error('Ollama is not running. Please start Ollama with: ollama serve');
+        throw new Error('Ollama service is not running. Please start it with: ollama serve');
+      } else if (error.message.includes('timeout')) {
+        this.logger.error('Ollama request timed out. The model might be too large or busy.');
+        throw new Error('Request timed out. Try using a smaller model or wait for current requests to complete.');
+      } else {
+        this.logger.error(`Ollama chat failed: ${error.message}`);
+        throw error;
+      }
     }
   }
 

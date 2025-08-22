@@ -24,9 +24,17 @@ export async function troubleshoot(options) {
 
   const context = await gatherContext(options);
   
-  const spinner = ora('Analyzing issue...').start();
+  const spinner = ora('Initializing AI assistant...').start();
   
   try {
+    spinner.text = 'Connecting to AI assistant...';
+    
+    // Check AI provider status
+    if (process.env.AI_PROVIDER === 'ollama' || !process.env.AI_PROVIDER) {
+      spinner.text = 'Verifying Ollama connection...';
+    }
+    
+    spinner.text = 'Analyzing issue (this may take 1-3 minutes)...';
     const recommendation = await aiAssistant.getRecommendation(issue, context);
     
     spinner.succeed('Analysis complete');
@@ -38,7 +46,26 @@ export async function troubleshoot(options) {
     }
   } catch (error) {
     spinner.fail('Analysis failed');
-    console.error(chalk.red(error.message));
+    
+    if (error.message.includes('not running')) {
+      console.error(chalk.red('\n❌ ' + error.message));
+      console.log(chalk.yellow('\n💡 Quick fix:'));
+      console.log(chalk.white('   1. Open a new terminal'));
+      console.log(chalk.white('   2. Run: ollama serve'));
+      console.log(chalk.white('   3. Keep that terminal open and try again'));
+    } else if (error.message.includes('timeout')) {
+      console.error(chalk.red('\n⏰ ' + error.message));
+      console.log(chalk.yellow('\n💡 Suggestions:'));
+      console.log(chalk.white('   • Try using a smaller model: ollama pull llama3.2:3b'));
+      console.log(chalk.white('   • Wait a moment and try again'));
+      console.log(chalk.white('   • Check if Ollama is processing other requests'));
+    } else {
+      console.error(chalk.red('\n❌ Error: ' + error.message));
+    }
+    
+    console.log(chalk.cyan('\n🔄 Falling back to local recommendations...'));
+    const fallbackRecommendation = await getFallbackRecommendation(issue, context);
+    displayRecommendation(fallbackRecommendation);
   }
 }
 
@@ -125,6 +152,12 @@ function displayRecommendation(recommendation) {
   }
 
   console.log(chalk.cyan('\n' + '='.repeat(60) + '\n'));
+}
+
+async function getFallbackRecommendation(issue, context) {
+  // Create a simple AI assistant instance for local recommendations
+  const localAI = new AIAssistant();
+  return localAI.getLocalRecommendation(issue, context);
 }
 
 async function offerAutomatedFixes(recommendation, cloudManager) {

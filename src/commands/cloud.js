@@ -69,19 +69,28 @@ async function listResources(cloudManager, provider, options) {
     spinner.succeed(`Found ${resources.length} resource${resources.length !== 1 ? 's' : ''}`);
 
     const table = new Table({
-      head: resourceType ? ['Name', 'ID', 'Type', 'Status', 'Details'] : ['Name', 'ID', 'Resource Type', 'Status', 'Details'],
+      head: resourceType ? ['Name', 'Type', 'Status', 'Location', 'Details'] : ['Name', 'Resource Type', 'Status', 'Location', 'Details'],
       style: {
         head: ['cyan']
-      }
+      },
+      colWidths: resourceType ? [30, 15, 15, 20, null] : [30, 20, 15, 20, null],
+      wordWrap: true
     });
 
     resources.forEach(resource => {
+      // Truncate long names/IDs to fit better
+      const name = (resource.name || resource.id || 'N/A').substring(0, 28);
+      const type = resource.type || resource.resourceType || 'Unknown';
+      const status = getStatusColor(resource.status || resource.state);
+      const location = resource.location || 'global';
+      const details = getResourceDetails(resource);
+      
       table.push([
-        resource.name || 'N/A',
-        resource.id,
-        resource.type || resource.resourceType || 'Unknown',
-        getStatusColor(resource.status || resource.state),
-        getResourceDetails(resource)
+        name,
+        type,
+        status,
+        location,
+        details
       ]);
     });
 
@@ -144,10 +153,15 @@ function getStatusColor(status) {
 function getResourceDetails(resource) {
   const details = [];
   
-  if (resource.publicIp) details.push(`Public: ${resource.publicIp}`);
-  if (resource.privateIp) details.push(`Private: ${resource.privateIp}`);
-  if (resource.location) details.push(`Location: ${resource.location}`);
+  if (resource.publicIp) details.push(`IP: ${resource.publicIp}`);
+  if (resource.privateIp && !resource.publicIp) details.push(`IP: ${resource.privateIp}`);
   if (resource.creationDate) details.push(`Created: ${new Date(resource.creationDate).toLocaleDateString()}`);
+  if (resource.project) details.push(`Project: ${resource.project}`);
+  if (resource.assetType && !resource.project) {
+    // Show a shortened asset type if no other details
+    const shortType = resource.assetType.split('/').pop();
+    details.push(shortType);
+  }
   
-  return details.join(', ') || 'N/A';
+  return details.join(' | ') || '-';
 }

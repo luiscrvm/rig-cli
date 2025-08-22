@@ -158,6 +158,95 @@ Rig CLI is a Node.js ESM-based CLI tool for multi-cloud infrastructure managemen
 
 **Security Model**: No credential storage - relies on native cloud CLI authentication. APIs are enabled only when user explicitly opts into management mode.
 
+### AI Integration & Troubleshooting
+
+The CLI supports multiple AI providers for enhanced troubleshooting and recommendations:
+- **Ollama** - Local, free, privacy-focused
+- **OpenAI** - GPT-4 powered analysis
+- **Anthropic** - Claude-powered assistance
+
+#### Setting Up AI Providers
+
+**Option 1: Ollama (Local)**
+```bash
+# Install and start Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama serve
+
+# Pull a recommended model
+ollama pull llama3.2:3b        # Fast and efficient (2GB)
+ollama pull mistral:7b         # Balanced performance (4GB)
+ollama pull qwen2.5-coder:7b   # Optimized for code (4GB)
+```
+
+**Option 2: OpenAI**
+```bash
+# Set in .env file
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_MODEL=gpt-4o-mini  # Optional, defaults to gpt-4o-mini
+
+# Available models:
+# gpt-4o-mini - Fast and efficient (currently available)
+# gpt-5-nano - High-throughput tasks (when available)
+# gpt-5-mini - Cost-optimized reasoning (when available)  
+# gpt-5 - Complex reasoning (when available)
+```
+
+**Option 3: Anthropic (Claude)**
+```bash
+# Set in .env file
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022  # Optional, defaults to latest
+```
+
+#### Testing AI Providers
+```bash
+# Test current AI provider configuration
+node test-ai-providers.js
+
+# Test Ollama specifically
+node test-ollama.js
+
+# Switch between providers
+export AI_PROVIDER=openai  # or anthropic, ollama
+node test-ai-providers.js
+```
+
+#### Troubleshooting Commands
+```bash
+# AI-powered troubleshooting
+rig troubleshoot --issue "website seems to be down" --logs --suggest
+
+# Generate infrastructure scripts
+rig generate-script --task "backup database" --language bash
+
+# Environment variables for AI configuration
+export AI_PROVIDER=ollama           # Use Ollama (default)
+export OLLAMA_HOST=http://localhost:11434  # Ollama server URL
+export OLLAMA_MODEL=llama3.2:3b    # Specific model to use
+```
+
+#### Timeout & Performance Settings
+- **Request timeout**: 3 minutes (180 seconds) for AI analysis
+- **Health check timeout**: 5 seconds for Ollama connectivity
+- **Model context**: 4096 tokens for comprehensive analysis
+- **Fallback behavior**: Automatic fallback to local recommendations if AI fails
+
+#### Troubleshooting AI Issues
+```bash
+# If Ollama timeouts occur:
+# 1. Use a smaller model
+ollama pull llama3.2:3b
+
+# 2. Check Ollama status
+curl http://localhost:11434/api/tags
+
+# 3. Restart Ollama service
+pkill ollama && ollama serve
+```
+
 ### Branch Management
 
 When implementing new features, create branches with descriptive names and commit/push/merge/delete following the established pattern in recent commits.
@@ -165,3 +254,9 @@ When implementing new features, create branches with descriptive names and commi
 ### Testing & Quality
 
 Currently uses Jest for testing framework, ESLint for linting. Tests directory exists but test implementations need to be added.
+
+**Testing Tools**:
+- `test-ollama.js` - Test Ollama AI integration independently
+- `test-ai-providers.js` - Test any configured AI provider (Ollama/OpenAI/Anthropic)
+- `npm run lint` - Code quality checks
+- `npm test` - Run test suite (when implemented)

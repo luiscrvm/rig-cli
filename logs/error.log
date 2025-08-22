@@ -30,3 +30,15 @@
 {"level":"error","message":"Failed to list GCP networks: Command failed: gcloud compute networks list --project=aibrandedbooth --format=json\nAPI [compute.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this will take a few \nminutes)? (y/N)?  ","timestamp":"2025-08-22T17:38:06.383Z"}
 {"level":"error","message":"Failed to list GCP databases: Command failed: gcloud sql instances list --project=aibrandedbooth --format=json\nAPI [sqladmin.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this will take a few \nminutes)? (y/N)?  ","timestamp":"2025-08-22T17:38:21.397Z"}
 {"level":"error","message":"Failed to list GCP load balancers: Command failed: gcloud compute forwarding-rules list --project=aibrandedbooth --format=json\nAPI [compute.googleapis.com] not enabled on project [aibrandedbooth]. Would you like to enable and retry (this will take a few \nminutes)? (y/N)?  ","timestamp":"2025-08-22T17:38:36.412Z"}
+{"level":"error","message":"Ollama generation failed: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:26:31.136Z"}
+{"level":"error","message":"AI Assistant error: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:26:31.138Z"}
+{"level":"error","message":"Ollama generation failed: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:30:07.479Z"}
+{"level":"error","message":"AI Assistant error: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:30:07.482Z"}
+{"level":"error","message":"Ollama generation failed: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:52:12.105Z"}
+{"level":"error","message":"AI Assistant error: timeout of 60000ms exceeded","timestamp":"2025-08-22T20:52:12.108Z"}
+{"level":"error","message":"OpenAI API error: Request failed with status code 400","timestamp":"2025-08-22T21:12:12.002Z"}
+{"level":"error","message":"AI Assistant error: Request failed with status code 400","timestamp":"2025-08-22T21:12:12.003Z"}
+{"level":"error","message":"OpenAI API error: Request failed with status code 400","timestamp":"2025-08-22T21:14:49.644Z"}
+{"level":"error","message":"AI Assistant error: Request failed with status code 400","timestamp":"2025-08-22T21:14:49.645Z"}
+{"level":"error","message":"OpenAI API error: Request failed with status code 400","timestamp":"2025-08-22T21:17:41.790Z"}
+{"level":"error","message":"AI Assistant error: Request failed with status code 400","timestamp":"2025-08-22T21:17:41.790Z"}
