@@ -16,17 +16,22 @@ export class AIAssistant {
 
   async getRecommendation(issue, context = {}) {
     try {
+      let result;
+      
       if (this.provider === 'ollama') {
-        return await this.ollama.analyzeInfrastructure(issue, context);
+        result = await this.ollama.analyzeInfrastructure(issue, context);
       } else if (this.provider === 'openai') {
         const prompt = this.buildPrompt(issue, context);
-        return await this.callOpenAI(prompt);
+        result = await this.callOpenAI(prompt);
       } else if (this.provider === 'anthropic') {
         const prompt = this.buildPrompt(issue, context);
-        return await this.callAnthropic(prompt);
+        result = await this.callAnthropic(prompt);
       } else {
-        return this.getLocalRecommendation(issue, context);
+        result = this.getLocalRecommendation(issue, context);
       }
+      
+      // Ensure we always return a string
+      return typeof result === 'string' ? result : JSON.stringify(result);
     } catch (error) {
       this.logger.error(`AI Assistant error: ${error.message}`);
       return this.getLocalRecommendation(issue, context);
@@ -157,17 +162,23 @@ export class AIAssistant {
     const category = this.categorizeIssue(issue);
     const recommendation = recommendations[category] || recommendations['connection'];
 
-    return {
-      category: recommendation.title,
-      analysis: `Based on the issue description, this appears to be a ${category} issue.`,
-      steps: recommendation.steps,
-      prevention: recommendation.prevention,
-      additionalResources: [
-        'Check cloud provider documentation',
-        'Review system logs',
-        'Consult team runbooks'
-      ]
-    };
+    // Format as a readable string instead of returning an object
+    let result = `**${recommendation.title}**\n\n`;
+    result += `Based on the issue description, this appears to be a ${category} issue.\n\n`;
+    result += `**Resolution Steps:**\n`;
+    recommendation.steps.forEach(step => {
+      result += `${step}\n`;
+    });
+    result += `\n**Prevention Measures:**\n`;
+    recommendation.prevention.forEach(measure => {
+      result += `• ${measure}\n`;
+    });
+    result += `\n**Additional Resources:**\n`;
+    result += `• Check cloud provider documentation\n`;
+    result += `• Review system logs\n`;
+    result += `• Consult team runbooks\n`;
+    
+    return result;
   }
 
   categorizeIssue(issue) {

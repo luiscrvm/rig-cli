@@ -46,3 +46,4 @@
 {"level":"error","message":"Cost analysis failed: cloudManager.listAllResources is not a function","timestamp":"2025-08-22T22:01:25.350Z"}
 {"level":"error","message":"Ollama generation failed: timeout of 60000ms exceeded","timestamp":"2025-08-22T22:03:58.555Z"}
 {"level":"error","message":"AI Assistant error: timeout of 60000ms exceeded","timestamp":"2025-08-22T22:03:58.558Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-08-22T22:07:56.141Z"}
