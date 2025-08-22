@@ -35,6 +35,7 @@ program
   .option('-l, --list', 'List resources')
   .option('-r, --region <region>', 'Specify region')
   .option('-t, --type <type>', 'Resource type (instances|storage|network)')
+  .option('-v, --verbose', 'Show verbose output and command logs')
   .action(async (provider, options) => {
     const { manageCloud } = await import('./commands/cloud.js');
     await manageCloud(provider, options);

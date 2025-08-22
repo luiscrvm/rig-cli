@@ -15,38 +15,35 @@ export async function initConfig() {
     credentials: {}
   };
 
-  // Step 1: Select cloud providers
-  const { providers } = await inquirer.prompt([
+  // Step 1: Select cloud provider
+  const { provider } = await inquirer.prompt([
     {
-      type: 'checkbox',
-      name: 'providers',
-      message: 'Select cloud providers to configure:',
+      type: 'list',
+      name: 'provider',
+      message: 'Select cloud provider to configure:',
       choices: [
         { name: 'GCP (Google Cloud Platform)', value: 'gcp' },
         { name: 'AWS (Coming Soon)', value: 'aws', disabled: true },
         { name: 'Azure (Coming Soon)', value: 'azure', disabled: true }
-      ],
-      validate: input => input.length > 0 || 'Please select at least one provider'
+      ]
     }
   ]);
 
-  config.providers = providers;
+  config.providers = [provider];
 
-  // Step 2: Configure each selected provider
+  // Step 2: Configure the selected provider
   let enableManagement = false;
-  for (const provider of providers) {
-    if (provider === 'gcp') {
-      const gcpResult = await configureGCP();
-      if (gcpResult) {
-        config.credentials.gcp = gcpResult.gcpConfig;
-        enableManagement = gcpResult.enableManagement;
-      } else {
-        console.log(chalk.red('GCP configuration failed. Please try again.'));
-        return;
-      }
+  if (provider === 'gcp') {
+    const gcpResult = await configureGCP();
+    if (gcpResult) {
+      config.credentials.gcp = gcpResult.gcpConfig;
+      enableManagement = gcpResult.enableManagement;
+    } else {
+      console.log(chalk.red('GCP configuration failed. Please try again.'));
+      return;
     }
-    // AWS and Azure configuration will be added later
   }
+  // AWS and Azure configuration will be added later
 
   // Step 3: Configure AI provider
   const aiConfig = await configureAI();
@@ -72,7 +69,29 @@ export async function initConfig() {
     console.log(chalk.white('  rig troubleshoot --issue "describe"    # Get help'));
     console.log(chalk.gray('\n💡 Run "rig init" again to enable management capabilities'));
   }
-  console.log();
+
+  // Ask if user wants to continue to interactive mode
+  const { continueToInteractive } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'continueToInteractive',
+      message: 'Would you like to start interactive mode now?',
+      default: true
+    }
+  ]);
+
+  if (continueToInteractive) {
+    const { InteractiveMode } = await import('../core/interactive.js');
+    const interactive = new InteractiveMode();
+    await interactive.start();
+  } else {
+    console.log(chalk.cyan('\n👍 Configuration complete!'));
+    console.log(chalk.white('You can now run any rig command:'));
+    console.log(chalk.gray('  rig interactive         # Start interactive mode'));
+    console.log(chalk.gray('  rig cloud gcp --list    # List resources'));
+    console.log(chalk.gray('  rig --help              # Show all commands'));
+    console.log(chalk.yellow('\n💡 The CLI will return to your shell prompt\n'));
+  }
 }
 
 async function configureGCP() {
@@ -93,36 +112,57 @@ async function configureGCP() {
   if (authInfo.authenticated) {
     console.log(chalk.green(`✓ Already authenticated as: ${authInfo.account}`));
     
-    let useCurrentAuth = false;
-    
     if (authInfo.project) {
       console.log(chalk.green(`✓ Current project: ${authInfo.project}`));
       
-      const authPrompt = await inquirer.prompt([
+      const { authChoice } = await inquirer.prompt([
         {
-          type: 'confirm',
-          name: 'useCurrentAuth',
-          message: 'Use current authentication and project?',
-          default: true
+          type: 'list',
+          name: 'authChoice',
+          message: 'What would you like to do?',
+          choices: [
+            { name: `Use current authentication and project (${authInfo.project})`, value: 'current' },
+            { name: 'Use current authentication but select different project', value: 'switch-project' },
+            { name: 'Re-authenticate with different account', value: 'reauth' }
+          ],
+          default: 'current'
         }
       ]);
-      
-      useCurrentAuth = authPrompt.useCurrentAuth;
 
-      if (!useCurrentAuth) {
+      if (authChoice === 'current') {
+        projectId = authInfo.project;
+        console.log(chalk.green(`✓ Using current project: ${projectId}`));
+      } else if (authChoice === 'switch-project') {
+        // Keep current authentication, but select different project
+        console.log(chalk.cyan('\n🗂️  Fetching GCP projects for current account...\n'));
+        const projects = await gcloudAuth.getProjects();
+        
+        projectId = await gcloudAuth.selectProject(projects);
+        if (!projectId) {
+          return null;
+        }
+        await gcloudAuth.setProject(projectId);
+      } else if (authChoice === 'reauth') {
+        // Re-authenticate with different account
         const authenticated = await gcloudAuth.authenticate();
         if (!authenticated) {
           return null;
         }
+        
+        // Get and select project after re-authentication
+        console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
+        const projects = await gcloudAuth.getProjects();
+        
+        projectId = await gcloudAuth.selectProject(projects);
+        if (!projectId) {
+          return null;
+        }
+        await gcloudAuth.setProject(projectId);
       }
-    }
-
-    // If user chose to use current auth and project, skip project selection
-    if (useCurrentAuth && authInfo.project) {
-      projectId = authInfo.project;
-      console.log(chalk.green(`✓ Using current project: ${projectId}`));
     } else {
-      // Need to select project
+      // Authenticated but no project set
+      console.log(chalk.yellow('✓ Authenticated but no project selected'));
+      
       console.log(chalk.cyan('\n🗂️  Fetching GCP projects...\n'));
       const projects = await gcloudAuth.getProjects();
       

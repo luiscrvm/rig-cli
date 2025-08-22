@@ -18,7 +18,12 @@ export class GCPProvider {
     
     // Verify gcloud is authenticated
     try {
-      const { stdout } = await execAsync('gcloud auth list --format=json');
+      const authCommand = 'gcloud auth list --format=json';
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${authCommand}`);
+      }
+      
+      const { stdout } = await execAsync(authCommand);
       const accounts = JSON.parse(stdout);
       
       if (!accounts || accounts.length === 0) {
@@ -27,7 +32,11 @@ export class GCPProvider {
       
       // Set project if not already set
       if (this.projectId) {
-        await execAsync(`gcloud config set project ${this.projectId}`);
+        const setProjectCommand = `gcloud config set project ${this.projectId}`;
+        if (process.env.RIG_VERBOSE) {
+          console.log(`[VERBOSE] Executing: ${setProjectCommand}`);
+        }
+        await execAsync(setProjectCommand);
       }
     } catch (error) {
       this.logger.error(`GCP initialization failed: ${error.message}`);
@@ -35,33 +44,149 @@ export class GCPProvider {
     }
   }
 
-  async listResources(type, region) {
+  async listResources(type, region, silent = false) {
     await this.initialize();
     
-    switch (type) {
-      case 'instances':
-        return await this.listInstances(region);
-      case 'storage':
-        return await this.listBuckets();
-      case 'network':
-        return await this.listNetworks();
-      case 'database':
-        return await this.listDatabases();
-      case 'loadbalancer':
-        return await this.listLoadBalancers();
-      default:
-        return [];
+    if (type) {
+      // Handle specific resource type requests
+      switch (type) {
+        case 'instances':
+          return await this.listInstances(region, silent);
+        case 'storage':
+          return await this.listBuckets(silent);
+        case 'network':
+          return await this.listNetworks(silent);
+        case 'database':
+          return await this.listDatabases(silent);
+        case 'loadbalancer':
+          return await this.listLoadBalancers(silent);
+        default:
+          return [];
+      }
+    } else {
+      // Discover all available resources in the project
+      return await this.discoverAllResources(region, silent);
     }
   }
 
-  async listInstances(zone) {
+  async discoverAllResources(region, silent = false) {
     try {
+      // Use gcloud asset to discover what resources exist in the project
+      const command = `gcloud asset search-all-resources --project=${this.projectId} --format=json`;
+      
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 30000 });
+      const assets = JSON.parse(stdout || '[]');
+      
+      // Transform the asset data into our common resource format
+      const resources = assets.map(asset => {
+        const assetType = asset.assetType || 'unknown';
+        const resourceType = this.mapAssetTypeToResourceType(assetType);
+        
+        return {
+          id: asset.name || asset.displayName || 'unknown',
+          name: asset.displayName || asset.name?.split('/').pop() || 'unknown',
+          type: resourceType,
+          resourceType: resourceType,
+          status: this.determineResourceStatus(asset),
+          location: asset.location,
+          assetType: assetType,
+          project: asset.project,
+          createTime: asset.createTime
+        };
+      });
+      
+      return resources;
+    } catch (error) {
+      if (!silent) {
+        this.logger.error(`Failed to discover resources: ${error.message}`);
+      }
+      
+      // Fall back to trying individual resource types if asset search fails
+      if (error.message.includes('Asset Inventory API') || error.message.includes('cloudasset.googleapis.com')) {
+        return await this.fallbackResourceDiscovery(region, silent);
+      }
+      
+      return [];
+    }
+  }
+
+  async fallbackResourceDiscovery(region, silent = false) {
+    // Fallback: try common resource types silently and return what works
+    const resourceTypes = [
+      { type: 'storage', method: () => this.listBuckets(true) },
+      { type: 'instances', method: () => this.listInstances(region, true) },
+      { type: 'network', method: () => this.listNetworks(true) },
+      { type: 'database', method: () => this.listDatabases(true) },
+      { type: 'loadbalancer', method: () => this.listLoadBalancers(true) }
+    ];
+
+    const allResources = [];
+    
+    for (const { type, method } of resourceTypes) {
+      try {
+        const resources = await method();
+        const typedResources = resources.map(resource => ({
+          ...resource,
+          resourceType: type
+        }));
+        allResources.push(...typedResources);
+      } catch (error) {
+        // Silently ignore errors in fallback mode
+        if (!silent && process.env.RIG_VERBOSE) {
+          console.log(`[VERBOSE] Skipping ${type}: ${error.message}`);
+        }
+      }
+    }
+    
+    return allResources;
+  }
+
+  mapAssetTypeToResourceType(assetType) {
+    const typeMap = {
+      'compute.googleapis.com/Instance': 'Compute Instance',
+      'compute.googleapis.com/Disk': 'Compute Disk',
+      'compute.googleapis.com/Network': 'VPC Network',
+      'compute.googleapis.com/Subnetwork': 'VPC Subnetwork',
+      'compute.googleapis.com/ForwardingRule': 'Load Balancer',
+      'storage.googleapis.com/Bucket': 'Cloud Storage',
+      'sqladmin.googleapis.com/Instance': 'Cloud SQL',
+      'container.googleapis.com/Cluster': 'GKE Cluster',
+      'run.googleapis.com/Service': 'Cloud Run Service',
+      'cloudfunctions.googleapis.com/CloudFunction': 'Cloud Function',
+      'appengine.googleapis.com/Application': 'App Engine',
+      'redis.googleapis.com/Instance': 'Cloud Redis',
+      'pubsub.googleapis.com/Topic': 'Pub/Sub Topic',
+      'pubsub.googleapis.com/Subscription': 'Pub/Sub Subscription'
+    };
+    
+    return typeMap[assetType] || assetType.split('/').pop() || 'Unknown';
+  }
+
+  determineResourceStatus(asset) {
+    // Extract status from asset state or labels
+    if (asset.state) return asset.state;
+    if (asset.labels?.status) return asset.labels.status;
+    if (asset.additionalAttributes?.status) return asset.additionalAttributes.status;
+    return 'active';
+  }
+
+  async listInstances(zone, silent = false) {
+    try {
+      // List all instances across all zones in the project, not filtered by region
       let command = `gcloud compute instances list --project=${this.projectId} --format=json`;
       if (zone) {
         command += ` --zones=${zone}`;
       }
       
-      const { stdout } = await execAsync(command);
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 15000 });
       const instances = JSON.parse(stdout || '[]');
       
       return instances.map(vm => ({
@@ -75,14 +200,32 @@ export class GCPProvider {
         creationTime: vm.creationTimestamp
       }));
     } catch (error) {
-      this.logger.error(`Failed to list GCP instances: ${error.message}`);
+      // Only log errors if not in silent mode
+      if (!silent) {
+        this.logger.error(`Failed to list GCP instances: ${error.message}`);
+      }
+      
+      // Check for permission errors and provide helpful guidance (only if not silent)
+      if (!silent && (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403'))) {
+        throw new Error(`❌ Permission denied: You don't have access to list compute instances in this project.\n   Required permission: compute.instances.list\n   Contact your GCP admin or check IAM roles.`);
+      }
+      
+      if (!silent && error.message.includes('API') && error.message.includes('not enabled')) {
+        throw new Error(`❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com?project=${this.projectId}\n   Or run: gcloud services enable compute.googleapis.com --project=${this.projectId}`);
+      }
+      
       return [];
     }
   }
 
-  async listBuckets() {
+  async listBuckets(silent = false) {
     try {
-      const { stdout } = await execAsync(`gsutil ls -p ${this.projectId} -L -b`);
+      const command = `gsutil ls -p ${this.projectId} -L -b`;
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 15000 });
       const lines = stdout.split('\n').filter(line => line.startsWith('gs://'));
       
       const buckets = [];
@@ -100,9 +243,19 @@ export class GCPProvider {
       
       return buckets;
     } catch (error) {
-      // If gsutil fails, try using gcloud storage
+      // Check for permission errors first
+      if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
+        throw new Error(`❌ Permission denied: You don't have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.`);
+      }
+      
+      // If gsutil fails for other reasons, try using gcloud storage
       try {
-        const { stdout } = await execAsync(`gcloud storage buckets list --project=${this.projectId} --format=json`);
+        const fallbackCommand = `gcloud storage buckets list --project=${this.projectId} --format=json`;
+        if (process.env.RIG_VERBOSE) {
+          console.log(`[VERBOSE] gsutil failed, trying: ${fallbackCommand}`);
+        }
+        
+        const { stdout } = await execAsync(fallbackCommand, { timeout: 15000 });
         const buckets = JSON.parse(stdout || '[]');
         
         return buckets.map(bucket => ({
@@ -114,14 +267,29 @@ export class GCPProvider {
         }));
       } catch (innerError) {
         this.logger.error(`Failed to list GCP storage: ${innerError.message}`);
+        
+        // Check for permission errors and provide helpful guidance
+        if (innerError.message.includes('Permission') || innerError.message.includes('denied') || innerError.message.includes('403')) {
+          throw new Error(`❌ Permission denied: You don't have access to list storage buckets in this project.\n   Required permission: storage.buckets.list\n   Contact your GCP admin or check IAM roles.`);
+        }
+        
+        if (innerError.message.includes('API') && innerError.message.includes('not enabled')) {
+          throw new Error(`❌ Cloud Storage API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/storage.googleapis.com`);
+        }
+        
         return [];
       }
     }
   }
 
-  async listNetworks() {
+  async listNetworks(silent = false) {
     try {
-      const { stdout } = await execAsync(`gcloud compute networks list --project=${this.projectId} --format=json`);
+      const command = `gcloud compute networks list --project=${this.projectId} --format=json`;
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 15000 });
       const networks = JSON.parse(stdout || '[]');
       
       return networks.map(net => ({
@@ -134,13 +302,28 @@ export class GCPProvider {
       }));
     } catch (error) {
       this.logger.error(`Failed to list GCP networks: ${error.message}`);
+      
+      // Check for permission errors and provide helpful guidance
+      if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
+        throw new Error(`❌ Permission denied: You don't have access to list VPC networks in this project.\n   Required permission: compute.networks.list\n   Contact your GCP admin or check IAM roles.`);
+      }
+      
+      if (error.message.includes('API') && error.message.includes('not enabled')) {
+        throw new Error(`❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com`);
+      }
+      
       return [];
     }
   }
 
-  async listDatabases() {
+  async listDatabases(silent = false) {
     try {
-      const { stdout } = await execAsync(`gcloud sql instances list --project=${this.projectId} --format=json`);
+      const command = `gcloud sql instances list --project=${this.projectId} --format=json`;
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 15000 });
       const databases = JSON.parse(stdout || '[]');
       
       return databases.map(db => ({
@@ -153,13 +336,28 @@ export class GCPProvider {
       }));
     } catch (error) {
       this.logger.error(`Failed to list GCP databases: ${error.message}`);
+      
+      // Check for permission errors and provide helpful guidance
+      if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
+        throw new Error(`❌ Permission denied: You don't have access to list Cloud SQL instances in this project.\n   Required permission: cloudsql.instances.list\n   Contact your GCP admin or check IAM roles.`);
+      }
+      
+      if (error.message.includes('API') && error.message.includes('not enabled')) {
+        throw new Error(`❌ Cloud SQL Admin API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/sqladmin.googleapis.com`);
+      }
+      
       return [];
     }
   }
 
-  async listLoadBalancers() {
+  async listLoadBalancers(silent = false) {
     try {
-      const { stdout } = await execAsync(`gcloud compute forwarding-rules list --project=${this.projectId} --format=json`);
+      const command = `gcloud compute forwarding-rules list --project=${this.projectId} --format=json`;
+      if (process.env.RIG_VERBOSE) {
+        console.log(`[VERBOSE] Executing: ${command}`);
+      }
+      
+      const { stdout } = await execAsync(command, { timeout: 15000 });
       const rules = JSON.parse(stdout || '[]');
       
       return rules.map(lb => ({
@@ -172,6 +370,16 @@ export class GCPProvider {
       }));
     } catch (error) {
       this.logger.error(`Failed to list GCP load balancers: ${error.message}`);
+      
+      // Check for permission errors and provide helpful guidance
+      if (error.message.includes('Permission') || error.message.includes('denied') || error.message.includes('403')) {
+        throw new Error(`❌ Permission denied: You don't have access to list load balancers in this project.\n   Required permission: compute.forwardingRules.list\n   Contact your GCP admin or check IAM roles.`);
+      }
+      
+      if (error.message.includes('API') && error.message.includes('not enabled')) {
+        throw new Error(`❌ Compute Engine API not enabled in this project.\n   Enable it at: https://console.cloud.google.com/apis/library/compute.googleapis.com`);
+      }
+      
       return [];
     }
   }

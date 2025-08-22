@@ -21,13 +21,23 @@ export class CloudManager {
     return provider;
   }
 
-  async listResources(provider, type, region) {
+  async listResources(provider, type, region, silent = false) {
     try {
       const cloudProvider = await this.getProvider(provider);
-      return await cloudProvider.listResources(type, region);
+      return await cloudProvider.listResources(type, region, silent);
     } catch (error) {
-      this.logger.error(`Failed to list resources: ${error.message}`);
-      throw error;
+      // Only log errors if not in silent mode
+      if (!silent) {
+        this.logger.error(`Failed to list resources: ${error.message}`);
+      }
+      
+      // If this is a permission error or API not enabled error, only propagate if not in silent mode
+      if (!silent && (error.message.includes('❌ Permission denied') || error.message.includes('❌ ') && error.message.includes('API not enabled'))) {
+        throw error;
+      }
+      
+      // For other errors or silent mode, return empty array to allow graceful degradation
+      return [];
     }
   }
 

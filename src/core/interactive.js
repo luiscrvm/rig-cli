@@ -125,11 +125,16 @@ export class InteractiveMode {
         this.context.region
       );
       
-      spinner.succeed('Resources fetched successfully');
-      
       if (resources.length === 0) {
-        console.log(chalk.yellow('\nNo resources found.\n'));
+        spinner.warn('No resources found or access denied');
+        console.log(chalk.yellow('\nNo resources found.'));
+        console.log(chalk.gray('This could be due to:'));
+        console.log(chalk.gray('  • No resources of this type exist'));
+        console.log(chalk.gray('  • Insufficient permissions to list resources'));
+        console.log(chalk.gray('  • Resources exist in a different region'));
+        console.log(chalk.cyan('\n💡 Try enabling APIs or checking permissions in GCP Console\n'));
       } else {
+        spinner.succeed('Resources fetched successfully');
         console.log(chalk.cyan(`\nFound ${resources.length} ${resourceType}:\n`));
         resources.forEach(resource => {
           console.log(`  • ${resource.name || resource.id} (${resource.status || 'Active'})`);
@@ -138,7 +143,8 @@ export class InteractiveMode {
       }
     } catch (error) {
       spinner.fail('Failed to fetch resources');
-      console.error(chalk.red(error.message));
+      console.log(chalk.red(`\n❌ Error: ${error.message}`));
+      console.log(chalk.yellow('\n💡 You can still explore other resource types or use other features\n'));
     }
   }
 
