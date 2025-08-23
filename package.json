@@ -31,7 +31,7 @@
     "@azure/arm-compute": "^21.0.0",
     "@azure/arm-resources": "^5.0.0",
     "@azure/identity": "^4.0.0",
-    "@google-cloud/compute": "^4.0.0",
+    "@google-cloud/compute": "^6.2.0",
     "@google-cloud/storage": "^7.0.0",
     "axios": "^1.0.0",
     "chalk": "^5.0.0",
