@@ -27,10 +27,10 @@ docker-compose down
 docker build -f Dockerfile.prod -t devops-cli:latest .
 
 # Tag for GCP Container Registry (if using GCP)
-docker tag devops-cli:latest gcr.io/my-test-project/devops-cli:latest
+docker tag devops-cli:latest gcr.io/aibrandedbooth/devops-cli:latest
 
 # Push to registry
-docker push gcr.io/my-test-project/devops-cli:latest
+docker push gcr.io/aibrandedbooth/devops-cli:latest
 
 # Run production container
 docker run -p 8080:8080 devops-cli:latest

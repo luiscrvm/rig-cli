@@ -1,0 +1,37 @@
+# Hadolint configuration for Dockerfile linting
+ignored:
+  # Ignore pinning versions in package managers
+  - DL3008
+  # Ignore sudo usage (if needed for specific use cases)
+  - DL3004
+
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - registry.k8s.io
+
+# Override severity levels
+override:
+  error:
+    - DL3020  # Use COPY instead of ADD
+  warning:
+    - DL3009  # Delete apt cache
+  info:
+    - DL3006  # Switch to another baseimage
+
+# Allow rules for specific instructions
+allowedInstructions:
+  - FROM
+  - WORKDIR
+  - COPY
+  - ADD
+  - RUN
+  - CMD
+  - ENTRYPOINT
+  - ENV
+  - ARG
+  - EXPOSE
+  - VOLUME
+  - USER
+  - LABEL
+  - HEALTHCHECK

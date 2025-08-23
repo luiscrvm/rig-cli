@@ -1,0 +1,49 @@
+# Trivy configuration for container and filesystem scanning
+format: json
+output: trivy-report.json
+
+# Vulnerability scanning
+vulnerability:
+  type:
+    - os
+    - library
+  scanners:
+    - vuln
+    - secret
+
+# Secret scanning
+secret:
+  config: trivy-secret.yaml
+
+# Severity levels to report
+severity:
+  - UNKNOWN
+  - LOW
+  - MEDIUM
+  - HIGH
+  - CRITICAL
+
+# Exit code when vulnerabilities are found
+exit-code: 1
+
+# Ignore unfixed vulnerabilities
+ignore-unfixed: false
+
+# Skip files
+skip-files:
+  - "**/*.md"
+  - "**/node_modules/**"
+  - "**/vendor/**"
+  - "**/.git/**"
+
+# Skip directories
+skip-dirs:
+  - node_modules
+  - vendor
+  - .git
+
+# Timeout for scanning
+timeout: 5m
+
+# Cache directory
+cache-dir: /tmp/trivy-cache
