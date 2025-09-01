@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
+import yaml from 'js-yaml';
+import fs from 'fs';
 import { CloudManager } from '../core/cloudManager.js';
 import { AIAssistant } from '../core/aiAssistant.js';
 import { Logger } from '../utils/logger.js';
@@ -229,23 +231,55 @@ async function analyzeProject(projectAnalyzer, logger) {
 }
 
 async function generateCompleteStack(options, analysis, cloudManager, aiAssistant, logger) {
-  console.log(chalk.rainbow.bold('\n🚀 COMPLETE STACK GENERATION'));
-  console.log(chalk.rainbow('='.repeat(40)));
+  console.log(chalk.cyan.bold('\n🚀 COMPLETE STACK GENERATION'));
+  console.log(chalk.cyan('='.repeat(40)));
+  
+  // Display detected services and infrastructure
+  console.log(chalk.white.bold('\n📋 DETECTED INFRASTRUCTURE:'));
+  
+  if (analysis.techStack.length > 0) {
+    console.log(chalk.green(`  Tech Stack: ${analysis.techStack.join(', ')}`));
+  }
+  
+  if (analysis.databases.length > 0) {
+    console.log(chalk.blue(`  Databases: ${analysis.databases.map(d => d.type).join(', ')}`));
+  }
+  
+  if (analysis.caches.length > 0) {
+    console.log(chalk.yellow(`  Caches: ${analysis.caches.map(c => c.type).join(', ')}`));
+  }
+  
+  if (analysis.queues.length > 0) {
+    console.log(chalk.magenta(`  Queues: ${analysis.queues.map(q => q.type).join(', ')}`));
+  }
+  
+  if (analysis.ports.length > 0) {
+    console.log(chalk.cyan(`  Detected Ports: ${analysis.ports.map(p => p.host).join(', ')}`));
+  }
+  
+  if (analysis.runningServices.length > 0) {
+    console.log(chalk.green(`  Running Services: ${analysis.runningServices.join(', ')}`));
+  }
 
+  // Auto-select components based on analysis
   const components = await selectStackComponents(analysis);
   
+  // Pass the enhanced analysis to each generator
   for (const component of components) {
     console.log(chalk.blue(`\n📦 Generating ${component}...`));
     
     switch (component) {
     case 'terraform':
-      await generateTerraform(options, analysis, cloudManager, aiAssistant, logger);
+      await generateTerraformWithServices(options, analysis, cloudManager, aiAssistant, logger);
       break;
     case 'kubernetes':
-      await generateKubernetes(options, analysis, cloudManager, aiAssistant, logger);
+      await generateKubernetesWithServices(options, analysis, cloudManager, aiAssistant, logger);
       break;
     case 'docker':
-      await generateDocker(options, analysis, aiAssistant, logger);
+      await generateDockerWithServices(options, analysis, aiAssistant, logger);
+      break;
+    case 'docker-compose':
+      await generateDockerCompose(options, analysis, aiAssistant, logger);
       break;
     case 'cicd':
       await generateCICD(options, analysis, aiAssistant, logger);
@@ -258,15 +292,23 @@ async function generateCompleteStack(options, analysis, cloudManager, aiAssistan
 
   console.log(chalk.green.bold('\n✅ Complete stack generation finished!'));
   console.log(chalk.gray('Review the generated files and customize as needed.'));
+  
+  // Display next steps
+  console.log(chalk.yellow.bold('\n📝 NEXT STEPS:'));
+  console.log('  1. Review generated configurations');
+  console.log('  2. Update environment variables');
+  console.log('  3. Test locally with docker-compose');
+  console.log('  4. Deploy with terraform apply');
 }
 
 async function selectStackComponents(analysis) {
   const availableComponents = [
     { name: '🏗️  Terraform Infrastructure', value: 'terraform', checked: true },
-    { name: '🐳 Docker Configurations', value: 'docker', checked: true },
-    { name: '⚡ Kubernetes Manifests', value: 'kubernetes', checked: analysis?.needsOrchestration !== false },
-    { name: '🔄 CI/CD Pipelines', value: 'cicd', checked: true },
-    { name: '📊 Monitoring Stack', value: 'monitoring', checked: true }
+    { name: '🐳 Docker Configurations', value: 'docker', checked: !analysis.hasDocker },
+    { name: '🐋 Docker Compose Stack', value: 'docker-compose', checked: analysis.databases.length > 0 || analysis.caches.length > 0 },
+    { name: '⚡ Kubernetes Manifests', value: 'kubernetes', checked: analysis?.needsOrchestration === true },
+    { name: '🔄 CI/CD Pipelines', value: 'cicd', checked: !analysis.hasCI },
+    { name: '📊 Monitoring Stack', value: 'monitoring', checked: analysis.ports.length > 0 || analysis.runningServices.length > 0 }
   ];
 
   const { components } = await inquirer.prompt([
@@ -285,4 +327,137 @@ async function selectStackComponents(analysis) {
   ]);
 
   return components;
+}
+
+async function generateTerraformWithServices(options, analysis, cloudManager, aiAssistant, logger) {
+  const generator = new TerraformGenerator(cloudManager, aiAssistant);
+  
+  // Enhanced options with detected services
+  const enhancedOptions = {
+    ...options,
+    databases: analysis.databases,
+    caches: analysis.caches,
+    queues: analysis.queues,
+    storage: analysis.storage,
+    ports: analysis.ports,
+    services: analysis.runningServices
+  };
+  
+  await generator.generate(enhancedOptions, analysis);
+}
+
+async function generateKubernetesWithServices(options, analysis, cloudManager, aiAssistant, logger) {
+  const generator = new KubernetesGenerator(cloudManager, aiAssistant);
+  
+  // Enhanced options with detected services
+  const enhancedOptions = {
+    ...options,
+    databases: analysis.databases,
+    caches: analysis.caches,
+    queues: analysis.queues,
+    ports: analysis.ports,
+    services: analysis.runningServices,
+    envVariables: analysis.envVariables
+  };
+  
+  await generator.generate(enhancedOptions, analysis);
+}
+
+async function generateDockerWithServices(options, analysis, aiAssistant, logger) {
+  const generator = new DockerGenerator(aiAssistant);
+  
+  // Enhanced options with detected services
+  const enhancedOptions = {
+    ...options,
+    techStack: analysis.techStack,
+    packageManager: analysis.packageManager,
+    ports: analysis.ports,
+    envVariables: analysis.envVariables
+  };
+  
+  await generator.generate(enhancedOptions, analysis);
+}
+
+async function generateDockerCompose(options, analysis, aiAssistant, logger) {
+  const generator = new DockerGenerator(aiAssistant);
+  
+  // Generate a complete docker-compose.yml with all detected services
+  const composeConfig = {
+    version: '3.8',
+    services: {}
+  };
+  
+  // Add main application
+  composeConfig.services.app = {
+    build: '.',
+    ports: analysis.ports.map(p => `${p.host}:${p.container}`),
+    environment: Object.keys(analysis.envVariables).filter(k => !k.includes('PASSWORD') && !k.includes('SECRET')),
+    depends_on: []
+  };
+  
+  // Add databases
+  for (const db of analysis.databases) {
+    if (db.type === 'postgresql') {
+      composeConfig.services.postgres = {
+        image: 'postgres:15',
+        environment: ['POSTGRES_DB=app', 'POSTGRES_USER=admin', 'POSTGRES_PASSWORD=password'],
+        volumes: ['postgres_data:/var/lib/postgresql/data'],
+        ports: ['5432:5432']
+      };
+      composeConfig.services.app.depends_on.push('postgres');
+    } else if (db.type === 'mysql') {
+      composeConfig.services.mysql = {
+        image: 'mysql:8',
+        environment: ['MYSQL_DATABASE=app', 'MYSQL_ROOT_PASSWORD=password'],
+        volumes: ['mysql_data:/var/lib/mysql'],
+        ports: ['3306:3306']
+      };
+      composeConfig.services.app.depends_on.push('mysql');
+    } else if (db.type === 'mongodb') {
+      composeConfig.services.mongo = {
+        image: 'mongo:6',
+        volumes: ['mongo_data:/data/db'],
+        ports: ['27017:27017']
+      };
+      composeConfig.services.app.depends_on.push('mongo');
+    }
+  }
+  
+  // Add caches
+  for (const cache of analysis.caches) {
+    if (cache.type === 'redis') {
+      composeConfig.services.redis = {
+        image: 'redis:7-alpine',
+        ports: ['6379:6379'],
+        volumes: ['redis_data:/data']
+      };
+      composeConfig.services.app.depends_on.push('redis');
+    }
+  }
+  
+  // Add queues
+  for (const queue of analysis.queues) {
+    if (queue.type === 'rabbitmq') {
+      composeConfig.services.rabbitmq = {
+        image: 'rabbitmq:3-management',
+        ports: ['5672:5672', '15672:15672'],
+        volumes: ['rabbitmq_data:/var/lib/rabbitmq']
+      };
+      composeConfig.services.app.depends_on.push('rabbitmq');
+    }
+  }
+  
+  // Add volumes
+  composeConfig.volumes = {};
+  if (composeConfig.services.postgres) composeConfig.volumes.postgres_data = {};
+  if (composeConfig.services.mysql) composeConfig.volumes.mysql_data = {};
+  if (composeConfig.services.mongo) composeConfig.volumes.mongo_data = {};
+  if (composeConfig.services.redis) composeConfig.volumes.redis_data = {};
+  if (composeConfig.services.rabbitmq) composeConfig.volumes.rabbitmq_data = {};
+  
+  // Write docker-compose.yml
+  const composeYaml = yaml.dump(composeConfig);
+  fs.writeFileSync('docker-compose.generated.yml', composeYaml);
+  
+  console.log(chalk.green('✅ Generated docker-compose.generated.yml with all detected services'));
 }

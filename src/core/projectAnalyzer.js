@@ -34,7 +34,15 @@ export class ProjectAnalyzer {
       hasKubernetes: false,
       hasTerraform: false,
       hasCI: false,
-      needsOrchestration: false
+      needsOrchestration: false,
+      runningServices: [],
+      detectedServices: {},
+      ports: [],
+      envVariables: {},
+      databases: [],
+      caches: [],
+      queues: [],
+      storage: []
     };
 
     // Analyze project structure
@@ -45,6 +53,15 @@ export class ProjectAnalyzer {
     
     // Analyze existing infrastructure files
     await this.analyzeInfrastructureFiles(analysis);
+    
+    // Detect running services and ports
+    await this.detectRunningServices(analysis);
+    
+    // Analyze environment variables and configs
+    await this.analyzeEnvironmentConfig(analysis);
+    
+    // Detect database, cache, and queue services
+    await this.detectDataServices(analysis);
     
     // Get cloud infrastructure if available
     await this.analyzeCloudInfrastructure(analysis);
@@ -464,5 +481,203 @@ export class ProjectAnalyzer {
     };
     
     return (costMap[resourceGroup.type] || 10) * (resourceGroup.items?.length || 0);
+  }
+
+  async detectRunningServices(analysis) {
+    try {
+      // Check for running services in docker-compose
+      if (fs.existsSync(path.join(this.projectRoot, 'docker-compose.yml'))) {
+        const dockerCompose = fs.readFileSync(path.join(this.projectRoot, 'docker-compose.yml'), 'utf8');
+        
+        // Parse services from docker-compose
+        const serviceMatches = dockerCompose.match(/^\s{2}(\w+):/gm) || [];
+        analysis.runningServices = serviceMatches.map(s => s.trim().replace(':', ''));
+        
+        // Extract ports
+        const portMatches = dockerCompose.match(/ports:\s*\n\s*-\s*"?(\d+):(\d+)"?/g) || [];
+        analysis.ports = portMatches.map(p => {
+          const match = p.match(/(\d+):(\d+)/);
+          return { host: match[1], container: match[2] };
+        });
+      }
+
+      // Check for services in package.json scripts
+      if (fs.existsSync(path.join(this.projectRoot, 'package.json'))) {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(this.projectRoot, 'package.json'), 'utf8'));
+        const scripts = packageJson.scripts || {};
+        
+        // Detect services from scripts
+        if (scripts.start) analysis.detectedServices.main = scripts.start;
+        if (scripts.dev) analysis.detectedServices.development = scripts.dev;
+        if (scripts.build) analysis.detectedServices.build = scripts.build;
+        if (scripts.test) analysis.detectedServices.test = scripts.test;
+        
+        // Detect ports from scripts
+        const portPattern = /(?:PORT|port)=(\d+)|:(\d+)/g;
+        Object.values(scripts).forEach(script => {
+          const matches = script.matchAll(portPattern);
+          for (const match of matches) {
+            const port = match[1] || match[2];
+            if (port && !analysis.ports.find(p => p.host === port)) {
+              analysis.ports.push({ host: port, container: port });
+            }
+          }
+        });
+      }
+
+      // Try to detect running processes (local development)
+      try {
+        const { stdout } = await execAsync('lsof -i -P -n | grep LISTEN | head -20 2>/dev/null || true');
+        const lines = stdout.trim().split('\n').filter(Boolean);
+        
+        lines.forEach(line => {
+          const parts = line.split(/\s+/);
+          const portMatch = parts.find(p => p.includes(':'));
+          if (portMatch) {
+            const port = portMatch.split(':').pop();
+            if (port && /^\d+$/.test(port)) {
+              const processName = parts[0];
+              if (!analysis.ports.find(p => p.host === port)) {
+                analysis.ports.push({ 
+                  host: port, 
+                  container: port,
+                  process: processName 
+                });
+              }
+            }
+          }
+        });
+      } catch (error) {
+        // Ignore if lsof is not available
+      }
+
+    } catch (error) {
+      this.logger.warn(`Failed to detect running services: ${error.message}`);
+    }
+  }
+
+  async analyzeEnvironmentConfig(analysis) {
+    try {
+      // Check for .env files
+      const envFiles = ['.env', '.env.local', '.env.development', '.env.production'];
+      
+      for (const envFile of envFiles) {
+        if (fs.existsSync(path.join(this.projectRoot, envFile))) {
+          const content = fs.readFileSync(path.join(this.projectRoot, envFile), 'utf8');
+          const lines = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+          
+          lines.forEach(line => {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              analysis.envVariables[key.trim()] = value.trim().replace(/["']/g, '');
+              
+              // Detect services from environment variables
+              if (key.includes('DATABASE_URL') || key.includes('DB_')) {
+                analysis.databases.push({ type: 'detected', config: key });
+              }
+              if (key.includes('REDIS') || key.includes('CACHE')) {
+                analysis.caches.push({ type: 'redis', config: key });
+              }
+              if (key.includes('QUEUE') || key.includes('AMQP') || key.includes('RABBIT')) {
+                analysis.queues.push({ type: 'detected', config: key });
+              }
+              if (key.includes('S3') || key.includes('STORAGE') || key.includes('BUCKET')) {
+                analysis.storage.push({ type: 'object-storage', config: key });
+              }
+            }
+          });
+        }
+      }
+
+      // Check for config files
+      const configFiles = ['config.json', 'config.yml', 'config.yaml', 'settings.json'];
+      for (const configFile of configFiles) {
+        if (fs.existsSync(path.join(this.projectRoot, configFile))) {
+          analysis.detectedServices.configFile = configFile;
+        }
+      }
+
+    } catch (error) {
+      this.logger.warn(`Failed to analyze environment config: ${error.message}`);
+    }
+  }
+
+  async detectDataServices(analysis) {
+    try {
+      // Detect from dependencies
+      if (analysis.dependencies.length > 0) {
+        // Database detection
+        const dbPackages = ['pg', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'sqlite3', 'sequelize', 'typeorm', 'prisma'];
+        const detectedDbs = analysis.dependencies.filter(dep => dbPackages.some(db => dep.includes(db)));
+        
+        detectedDbs.forEach(db => {
+          let dbType = 'sql';
+          if (db.includes('mongo')) dbType = 'mongodb';
+          if (db.includes('pg') || db.includes('postgres')) dbType = 'postgresql';
+          if (db.includes('mysql')) dbType = 'mysql';
+          if (db.includes('sqlite')) dbType = 'sqlite';
+          
+          if (!analysis.databases.find(d => d.type === dbType)) {
+            analysis.databases.push({ type: dbType, package: db });
+          }
+        });
+
+        // Cache detection
+        const cachePackages = ['redis', 'ioredis', 'memcached', 'node-cache'];
+        const detectedCaches = analysis.dependencies.filter(dep => cachePackages.some(cache => dep.includes(cache)));
+        
+        detectedCaches.forEach(cache => {
+          let cacheType = 'redis';
+          if (cache.includes('memcached')) cacheType = 'memcached';
+          if (cache.includes('node-cache')) cacheType = 'in-memory';
+          
+          if (!analysis.caches.find(c => c.type === cacheType)) {
+            analysis.caches.push({ type: cacheType, package: cache });
+          }
+        });
+
+        // Queue detection
+        const queuePackages = ['amqplib', 'bull', 'bee-queue', 'kue', 'agenda', 'node-resque', 'sqs-consumer', 'kafka'];
+        const detectedQueues = analysis.dependencies.filter(dep => queuePackages.some(queue => dep.includes(queue)));
+        
+        detectedQueues.forEach(queue => {
+          let queueType = 'rabbitmq';
+          if (queue.includes('bull') || queue.includes('bee')) queueType = 'redis-queue';
+          if (queue.includes('sqs')) queueType = 'aws-sqs';
+          if (queue.includes('kafka')) queueType = 'kafka';
+          
+          if (!analysis.queues.find(q => q.type === queueType)) {
+            analysis.queues.push({ type: queueType, package: queue });
+          }
+        });
+
+        // Storage detection  
+        const storagePackages = ['aws-sdk', '@google-cloud/storage', 'multer', 'multer-s3', 'minio'];
+        const detectedStorage = analysis.dependencies.filter(dep => storagePackages.some(storage => dep.includes(storage)));
+        
+        detectedStorage.forEach(storage => {
+          let storageType = 'local';
+          if (storage.includes('aws-sdk') || storage.includes('s3')) storageType = 's3';
+          if (storage.includes('@google-cloud/storage')) storageType = 'gcs';
+          if (storage.includes('minio')) storageType = 'minio';
+          
+          if (!analysis.storage.find(s => s.type === storageType)) {
+            analysis.storage.push({ type: storageType, package: storage });
+          }
+        });
+      }
+
+      // Check for database files
+      const dbFiles = ['schema.sql', 'migrations/', 'prisma/schema.prisma', 'models/'];
+      for (const dbFile of dbFiles) {
+        if (await this.fileExists(dbFile)) {
+          analysis.databases.push({ type: 'sql-schema', file: dbFile });
+          break;
+        }
+      }
+
+    } catch (error) {
+      this.logger.warn(`Failed to detect data services: ${error.message}`);
+    }
   }
 }
