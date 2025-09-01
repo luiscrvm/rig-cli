@@ -46,3 +46,4 @@
 {"level":"error","message":"Infrastructure generation failed: Cannot read properties of undefined (reading 'bold')","timestamp":"2025-09-01T22:04:05.334Z"}
 {"level":"error","message":"Infrastructure generation failed: Cannot read properties of undefined (reading 'bold')","timestamp":"2025-09-01T22:10:39.003Z"}
 {"level":"error","message":"Infrastructure generation failed: this.generateJenkins is not a function","timestamp":"2025-09-01T22:16:25.261Z"}
+{"level":"error","message":"Infrastructure generation failed: generator.generate is not a function","timestamp":"2025-09-01T22:34:02.625Z"}

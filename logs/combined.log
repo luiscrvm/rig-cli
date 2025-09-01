@@ -96,3 +96,6 @@
 {"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-01T22:22:17.376Z"}
 {"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-01T22:22:47.118Z"}
 {"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-01T22:26:56.308Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-01T22:27:43.156Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-01T22:32:43.317Z"}
+{"level":"error","message":"Infrastructure generation failed: generator.generate is not a function","timestamp":"2025-09-01T22:34:02.625Z"}

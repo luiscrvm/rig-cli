@@ -93,7 +93,7 @@ export async function generate(type, options) {
       await analyzeProject(projectAnalyzer, logger);
       break;
     case 'stack':
-      await generateCompleteStack(options, analysis, cloudManager, aiAssistant, logger);
+      await generateCompleteStack(options, cloudManager, aiAssistant, logger);
       break;
     default:
       console.log(chalk.red(`Unknown generation type: ${type}`));
@@ -231,18 +231,21 @@ async function analyzeProject(projectAnalyzer, logger) {
   }
 }
 
-async function generateCompleteStack(options, analysis, cloudManager, aiAssistant, logger) {
+async function generateCompleteStack(options, cloudManager, aiAssistant, logger) {
   console.log(chalk.cyan.bold('\n🚀 COMPLETE STACK GENERATION'));
   console.log(chalk.cyan('='.repeat(50)));
   
+  // Analyze the cloud project infrastructure
+  const cloudAnalysis = await analyzeCloudInfrastructure(cloudManager, logger);
+  
   // Generate and display the infrastructure analysis report
-  const report = await generateInfrastructureReport(analysis);
+  const report = await generateCloudInfrastructureReport(cloudAnalysis);
   
   // Display the report on screen
   console.log(report.display);
   
   // Save the report to markdown
-  await saveInfrastructureReport(report.markdown, analysis.projectName);
+  await saveInfrastructureReport(report.markdown, cloudAnalysis.projectName);
   
   // Ask user if they want to proceed with generation
   const { proceedWithGeneration } = await inquirer.prompt([
@@ -261,7 +264,7 @@ async function generateCompleteStack(options, analysis, cloudManager, aiAssistan
   }
 
   // Auto-select components based on analysis
-  const components = await selectStackComponents(analysis);
+  const components = await selectCloudStackComponents(cloudAnalysis);
   
   // Pass the enhanced analysis to each generator
   for (const component of components) {
@@ -269,22 +272,22 @@ async function generateCompleteStack(options, analysis, cloudManager, aiAssistan
     
     switch (component) {
     case 'terraform':
-      await generateTerraformWithServices(options, analysis, cloudManager, aiAssistant, logger);
+      await generateTerraformFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger);
       break;
     case 'kubernetes':
-      await generateKubernetesWithServices(options, analysis, cloudManager, aiAssistant, logger);
+      await generateKubernetesFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger);
       break;
     case 'docker':
-      await generateDockerWithServices(options, analysis, aiAssistant, logger);
+      await generateDockerFromCloud(options, cloudAnalysis, aiAssistant, logger);
       break;
     case 'docker-compose':
-      await generateDockerCompose(options, analysis, aiAssistant, logger);
+      await generateDockerComposeFromCloud(options, cloudAnalysis, aiAssistant, logger);
       break;
     case 'cicd':
-      await generateCICD(options, analysis, aiAssistant, logger);
+      await generateCICD(options, cloudAnalysis, aiAssistant, logger);
       break;
     case 'monitoring':
-      await generateMonitoring(options, analysis, cloudManager, aiAssistant, logger);
+      await generateMonitoring(options, cloudAnalysis, cloudManager, aiAssistant, logger);
       break;
     }
   }
@@ -663,4 +666,381 @@ async function saveInfrastructureReport(markdown, projectName) {
   fs.writeFileSync(filepath, markdown);
   
   console.log(chalk.green(`\n📝 Report saved to: ${chalk.cyan(`infra-reports/${filename}`)}`));
+}
+
+async function analyzeCloudInfrastructure(cloudManager, logger) {
+  const spinner = ora('Analyzing cloud infrastructure...').start();
+  
+  try {
+    // Get cloud configuration
+    const cloudConfig = {
+      provider: 'GCP',
+      projectId: process.env.GCP_PROJECT_ID,
+      region: process.env.GCP_REGION || 'us-central1',
+      account: process.env.GCP_ACCOUNT
+    };
+    
+    // Get all cloud resources
+    const resources = await cloudManager.listAllResources();
+    
+    // Analyze resources
+    const analysis = {
+      projectName: cloudConfig.projectId || 'unknown-project',
+      cloudProvider: cloudConfig.provider,
+      region: cloudConfig.region,
+      timestamp: new Date().toISOString(),
+      resources: resources || [],
+      totalResources: 0,
+      resourcesByType: {},
+      estimatedMonthlyCost: 0,
+      databases: [],
+      compute: [],
+      storage: [],
+      networks: [],
+      loadBalancers: [],
+      recommendations: []
+    };
+    
+    // Process resources by type
+    if (resources) {
+      for (const resourceGroup of resources) {
+        if (resourceGroup.items && resourceGroup.items.length > 0) {
+          analysis.totalResources += resourceGroup.items.length;
+          analysis.resourcesByType[resourceGroup.type] = resourceGroup.items.length;
+          
+          // Categorize resources
+          switch (resourceGroup.type) {
+          case 'instances':
+            analysis.compute.push(...resourceGroup.items);
+            break;
+          case 'databases':
+            analysis.databases.push(...resourceGroup.items);
+            break;
+          case 'storage':
+            analysis.storage.push(...resourceGroup.items);
+            break;
+          case 'networks':
+            analysis.networks.push(...resourceGroup.items);
+            break;
+          case 'load-balancers':
+            analysis.loadBalancers.push(...resourceGroup.items);
+            break;
+          }
+          
+          // Estimate costs
+          analysis.estimatedMonthlyCost += estimateResourceGroupCost(resourceGroup);
+        }
+      }
+    }
+    
+    // Generate recommendations
+    analysis.recommendations = generateCloudRecommendations(analysis);
+    
+    spinner.succeed('Cloud infrastructure analysis completed');
+    return analysis;
+    
+  } catch (error) {
+    spinner.fail('Failed to analyze cloud infrastructure');
+    logger.error(`Cloud analysis error: ${error.message}`);
+    
+    // Return basic analysis with error info
+    return {
+      projectName: process.env.GCP_PROJECT_ID || 'unknown-project',
+      cloudProvider: 'GCP',
+      region: process.env.GCP_REGION || 'us-central1',
+      timestamp: new Date().toISOString(),
+      resources: [],
+      totalResources: 0,
+      resourcesByType: {},
+      estimatedMonthlyCost: 0,
+      databases: [],
+      compute: [],
+      storage: [],
+      networks: [],
+      loadBalancers: [],
+      recommendations: ['Unable to analyze cloud resources. Please check authentication and permissions.'],
+      error: error.message
+    };
+  }
+}
+
+async function generateCloudInfrastructureReport(analysis) {
+  const report = {
+    display: '',
+    markdown: ''
+  };
+  
+  // Build display report (for console)
+  let display = chalk.white.bold('\n📊 CLOUD INFRASTRUCTURE ANALYSIS REPORT\n');
+  display += chalk.gray('='.repeat(60)) + '\n';
+  
+  // Project Overview
+  display += chalk.yellow.bold('\n☁️  CLOUD PROJECT OVERVIEW\n');
+  display += `  • Project ID: ${chalk.cyan(analysis.projectName)}\n`;
+  display += `  • Provider: ${chalk.cyan(analysis.cloudProvider)}\n`;
+  display += `  • Region: ${chalk.cyan(analysis.region)}\n`;
+  display += `  • Total Resources: ${chalk.cyan(analysis.totalResources)}\n`;
+  display += `  • Estimated Monthly Cost: ${chalk.green('$' + analysis.estimatedMonthlyCost)}\n`;
+  
+  // Resource Breakdown
+  if (analysis.totalResources > 0) {
+    display += chalk.yellow.bold('\n📦 RESOURCE BREAKDOWN\n');
+    
+    if (analysis.compute.length > 0) {
+      display += chalk.blue(`  Compute Instances: ${analysis.compute.length}\n`);
+      analysis.compute.forEach(instance => {
+        display += chalk.gray(`    • ${instance.name} (${instance.status || 'unknown'})\n`);
+      });
+    }
+    
+    if (analysis.databases.length > 0) {
+      display += chalk.green(`  Databases: ${analysis.databases.length}\n`);
+      analysis.databases.forEach(db => {
+        display += chalk.gray(`    • ${db.name} (${db.engine || 'unknown'})\n`);
+      });
+    }
+    
+    if (analysis.storage.length > 0) {
+      display += chalk.magenta(`  Storage Buckets: ${analysis.storage.length}\n`);
+      analysis.storage.forEach(bucket => {
+        display += chalk.gray(`    • ${bucket.name}\n`);
+      });
+    }
+    
+    if (analysis.networks.length > 0) {
+      display += chalk.cyan(`  Networks: ${analysis.networks.length}\n`);
+      analysis.networks.forEach(network => {
+        display += chalk.gray(`    • ${network.name}\n`);
+      });
+    }
+    
+    if (analysis.loadBalancers.length > 0) {
+      display += chalk.yellow(`  Load Balancers: ${analysis.loadBalancers.length}\n`);
+      analysis.loadBalancers.forEach(lb => {
+        display += chalk.gray(`    • ${lb.name}\n`);
+      });
+    }
+    
+  } else {
+    display += chalk.yellow.bold('\n📦 RESOURCE BREAKDOWN\n');
+    display += chalk.gray('  • No resources found or unable to access resources\n');
+  }
+  
+  // Cost Breakdown
+  if (analysis.estimatedMonthlyCost > 0) {
+    display += chalk.yellow.bold('\n💰 ESTIMATED COSTS\n');
+    Object.entries(analysis.resourcesByType).forEach(([type, count]) => {
+      const cost = estimateResourceTypeCost(type, count);
+      display += `  • ${type}: $${cost}/month (${count} resources)\n`;
+    });
+  }
+  
+  // Recommendations
+  if (analysis.recommendations.length > 0) {
+    display += chalk.yellow.bold('\n💡 RECOMMENDATIONS\n');
+    analysis.recommendations.forEach((rec, i) => {
+      display += `  ${i + 1}. ${rec}\n`;
+    });
+  }
+  
+  if (analysis.error) {
+    display += chalk.red.bold('\n⚠️  ANALYSIS WARNINGS\n');
+    display += `  • ${analysis.error}\n`;
+  }
+  
+  report.display = display;
+  
+  // Build markdown report
+  let markdown = '# Cloud Infrastructure Analysis Report\n\n';
+  markdown += `**Generated:** ${analysis.timestamp}\n`;
+  markdown += `**Project:** ${analysis.projectName}\n`;
+  markdown += `**Provider:** ${analysis.cloudProvider}\n`;
+  markdown += `**Region:** ${analysis.region}\n\n`;
+  
+  markdown += '## Infrastructure Overview\n\n';
+  markdown += `- **Total Resources:** ${analysis.totalResources}\n`;
+  markdown += `- **Estimated Monthly Cost:** $${analysis.estimatedMonthlyCost}\n\n`;
+  
+  if (analysis.totalResources > 0) {
+    markdown += '## Resource Breakdown\n\n';
+    
+    if (analysis.compute.length > 0) {
+      markdown += `### Compute Instances (${analysis.compute.length})\n`;
+      markdown += '| Name | Status | Type |\n|------|--------|------|\n';
+      analysis.compute.forEach(instance => {
+        markdown += `| ${instance.name} | ${instance.status || 'Unknown'} | ${instance.machineType || 'Unknown'} |\n`;
+      });
+      markdown += '\n';
+    }
+    
+    if (analysis.databases.length > 0) {
+      markdown += `### Databases (${analysis.databases.length})\n`;
+      markdown += '| Name | Engine | Status |\n|------|--------|--------|\n';
+      analysis.databases.forEach(db => {
+        markdown += `| ${db.name} | ${db.engine || 'Unknown'} | ${db.status || 'Unknown'} |\n`;
+      });
+      markdown += '\n';
+    }
+    
+    if (analysis.storage.length > 0) {
+      markdown += `### Storage (${analysis.storage.length})\n`;
+      markdown += '| Name | Location | Storage Class |\n|------|----------|---------------|\n';
+      analysis.storage.forEach(bucket => {
+        markdown += `| ${bucket.name} | ${bucket.location || 'Unknown'} | ${bucket.storageClass || 'Unknown'} |\n`;
+      });
+      markdown += '\n';
+    }
+    
+    if (analysis.networks.length > 0) {
+      markdown += `### Networks (${analysis.networks.length})\n`;
+      analysis.networks.forEach(network => {
+        markdown += `- ${network.name}\n`;
+      });
+      markdown += '\n';
+    }
+  }
+  
+  if (analysis.recommendations.length > 0) {
+    markdown += '## Recommendations\n\n';
+    analysis.recommendations.forEach((rec, i) => {
+      markdown += `${i + 1}. ${rec}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  markdown += '## Next Steps\n\n';
+  markdown += '1. Review this cloud infrastructure analysis\n';
+  markdown += '2. Select components to generate based on existing resources\n';
+  markdown += '3. Generate Terraform to manage infrastructure as code\n';
+  markdown += '4. Set up monitoring and CI/CD for deployments\n\n';
+  
+  markdown += '---\n';
+  markdown += '*Generated by Rig CLI Cloud Infrastructure Analyzer*\n';
+  
+  report.markdown = markdown;
+  return report;
+}
+
+async function selectCloudStackComponents(analysis) {
+  const availableComponents = [
+    { name: '🏗️  Terraform Infrastructure (Import Existing)', value: 'terraform', checked: true },
+    { name: '⚡ Kubernetes Manifests', value: 'kubernetes', checked: analysis.compute.length > 0 },
+    { name: '🐳 Docker Configurations', value: 'docker', checked: analysis.compute.length > 0 },
+    { name: '🔄 CI/CD Pipelines', value: 'cicd', checked: true },
+    { name: '📊 Monitoring Stack', value: 'monitoring', checked: analysis.totalResources > 0 }
+  ];
+
+  const { components } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'components',
+      message: 'Select components to generate based on your cloud infrastructure:',
+      choices: availableComponents,
+      validate: (answer) => {
+        if (answer.length < 1) {
+          return 'You must choose at least one component.';
+        }
+        return true;
+      }
+    }
+  ]);
+
+  return components;
+}
+
+function generateCloudRecommendations(analysis) {
+  const recommendations = [];
+  
+  if (analysis.totalResources === 0) {
+    recommendations.push('No cloud resources found. Consider creating compute instances or databases.');
+    return recommendations;
+  }
+  
+  if (analysis.totalResources > 0) {
+    recommendations.push('Generate Terraform modules to manage existing infrastructure as code');
+  }
+  
+  if (analysis.compute.length > 0) {
+    recommendations.push('Set up Kubernetes manifests for container orchestration');
+    recommendations.push('Configure monitoring and logging for compute instances');
+  }
+  
+  if (analysis.databases.length > 0) {
+    recommendations.push('Implement database backup and disaster recovery strategies');
+  }
+  
+  if (analysis.storage.length > 0) {
+    recommendations.push('Review storage lifecycle policies and access controls');
+  }
+  
+  if (analysis.estimatedMonthlyCost > 100) {
+    recommendations.push('Review resource usage and consider cost optimization strategies');
+  }
+  
+  recommendations.push('Set up CI/CD pipelines for automated deployments');
+  
+  return recommendations;
+}
+
+function estimateResourceGroupCost(resourceGroup) {
+  const costMap = {
+    instances: 50,     // Average per instance
+    storage: 5,        // Average per bucket
+    databases: 75,     // Average per database
+    networks: 10,      // Average per network
+    'load-balancers': 25 // Average per load balancer
+  };
+  
+  return (costMap[resourceGroup.type] || 15) * (resourceGroup.items?.length || 0);
+}
+
+function estimateResourceTypeCost(type, count) {
+  const costMap = {
+    instances: 50,
+    storage: 5,
+    databases: 75,
+    networks: 10,
+    'load-balancers': 25
+  };
+  
+  return (costMap[type] || 15) * count;
+}
+
+// Simplified cloud-focused generation functions
+async function generateTerraformFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger) {
+  const generator = new TerraformGenerator(cloudManager, aiAssistant, logger);
+  await generator.generate({ ...options, import: true }, cloudAnalysis);
+}
+
+async function generateKubernetesFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger) {
+  const generator = new KubernetesGenerator(cloudManager, aiAssistant);
+  await generator.generate(options, cloudAnalysis);
+}
+
+async function generateDockerFromCloud(options, cloudAnalysis, aiAssistant, logger) {
+  const generator = new DockerGenerator(aiAssistant);
+  await generator.generate(options, cloudAnalysis);
+}
+
+async function generateDockerComposeFromCloud(options, cloudAnalysis, aiAssistant, logger) {
+  // Generate basic docker-compose for cloud services
+  const composeConfig = {
+    version: '3.8',
+    services: {
+      app: {
+        build: '.',
+        ports: ['8080:8080'],
+        environment: [
+          'NODE_ENV=production',
+          `GCP_PROJECT_ID=${cloudAnalysis.projectName}`,
+          `GCP_REGION=${cloudAnalysis.region}`
+        ]
+      }
+    }
+  };
+  
+  const composeYaml = yaml.dump(composeConfig);
+  fs.writeFileSync('docker-compose.generated.yml', composeYaml);
+  
+  console.log(chalk.green('✅ Generated docker-compose.generated.yml for cloud deployment'));
 }
