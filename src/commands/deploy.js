@@ -13,7 +13,7 @@ export async function deploy(options) {
   const aiAssistant = new AIAssistant();
 
   console.log(chalk.blue.bold('\n🚀 INFRASTRUCTURE DEPLOYMENT'));
-  console.log(chalk.blue('=' .repeat(50)));
+  console.log(chalk.blue('='.repeat(50)));
 
   try {
     // If no file specified, show interactive options
@@ -78,7 +78,7 @@ export async function deploy(options) {
 
 async function deployFromFile(configFile, cloudManager, logger, options) {
   console.log(chalk.cyan(`\n📄 DEPLOYING FROM: ${configFile}`));
-  console.log(chalk.cyan('=' .repeat(50)));
+  console.log(chalk.cyan('='.repeat(50)));
 
   // Check if file exists
   if (!fs.existsSync(configFile)) {
@@ -127,7 +127,7 @@ async function deployFromFile(configFile, cloudManager, logger, options) {
 
 async function deployGenerated(cloudManager, logger, options) {
   console.log(chalk.cyan('\n🏗️  DEPLOYING GENERATED INFRASTRUCTURE'));
-  console.log(chalk.cyan('=' .repeat(50)));
+  console.log(chalk.cyan('='.repeat(50)));
 
   // Check for generated files
   const generatedPaths = [
@@ -205,32 +205,32 @@ async function simulateDeployment(type, configFile, options) {
   console.log(chalk.gray(`Environment: ${options.env || 'default'}`));
   
   switch (type) {
-    case 'terraform':
-      console.log(chalk.green('\n✅ Terraform Plan:'));
-      console.log(chalk.gray('  + google_storage_bucket.main'));
-      console.log(chalk.gray('  + google_compute_instance.web'));
-      console.log(chalk.gray('  + google_compute_network.vpc'));
-      console.log(chalk.gray('\n  Plan: 3 to add, 0 to change, 0 to destroy.'));
-      break;
+  case 'terraform':
+    console.log(chalk.green('\n✅ Terraform Plan:'));
+    console.log(chalk.gray('  + google_storage_bucket.main'));
+    console.log(chalk.gray('  + google_compute_instance.web'));
+    console.log(chalk.gray('  + google_compute_network.vpc'));
+    console.log(chalk.gray('\n  Plan: 3 to add, 0 to change, 0 to destroy.'));
+    break;
       
-    case 'kubernetes':
-      console.log(chalk.green('\n✅ Kubernetes Resources:'));
-      console.log(chalk.gray('  + Namespace: default'));
-      console.log(chalk.gray('  + Deployment: web-app (3 replicas)'));
-      console.log(chalk.gray('  + Service: web-service'));
-      console.log(chalk.gray('  + Ingress: web-ingress'));
-      break;
+  case 'kubernetes':
+    console.log(chalk.green('\n✅ Kubernetes Resources:'));
+    console.log(chalk.gray('  + Namespace: default'));
+    console.log(chalk.gray('  + Deployment: web-app (3 replicas)'));
+    console.log(chalk.gray('  + Service: web-service'));
+    console.log(chalk.gray('  + Ingress: web-ingress'));
+    break;
       
-    case 'docker':
-      console.log(chalk.green('\n✅ Docker Deployment:'));
-      console.log(chalk.gray('  + Build image: app:latest'));
-      console.log(chalk.gray('  + Start containers: 1 instance'));
-      console.log(chalk.gray('  + Expose port: 3000'));
-      break;
+  case 'docker':
+    console.log(chalk.green('\n✅ Docker Deployment:'));
+    console.log(chalk.gray('  + Build image: app:latest'));
+    console.log(chalk.gray('  + Start containers: 1 instance'));
+    console.log(chalk.gray('  + Expose port: 3000'));
+    break;
       
-    default:
-      console.log(chalk.green('\n✅ Configuration validated'));
-      console.log(chalk.gray('  Ready for deployment'));
+  default:
+    console.log(chalk.green('\n✅ Configuration validated'));
+    console.log(chalk.gray('  Ready for deployment'));
   }
   
   console.log(chalk.yellow('\n⚠️  This was a dry run. Use --no-dry-run to execute.'));
@@ -245,7 +245,7 @@ async function executeDeployment(type, configFile, cloudManager, logger, options
     
     spinner.succeed(`${type} deployment completed successfully`);
     
-    console.log(chalk.green(`\n✅ Deployment successful!`));
+    console.log(chalk.green('\n✅ Deployment successful!'));
     console.log(chalk.gray(`Configuration: ${configFile}`));
     console.log(chalk.gray(`Type: ${type}`));
     console.log(chalk.gray(`Environment: ${options.env || 'default'}`));
@@ -265,7 +265,7 @@ async function executeDeployment(type, configFile, cloudManager, logger, options
 
 async function validateDeployment(cloudManager, logger, options) {
   console.log(chalk.yellow('\n🔍 CONFIGURATION VALIDATION'));
-  console.log(chalk.yellow('=' .repeat(50)));
+  console.log(chalk.yellow('='.repeat(50)));
 
   const { configPath } = await inquirer.prompt([
     {
@@ -302,7 +302,7 @@ async function validateDeployment(cloudManager, logger, options) {
 
 async function showDeploymentStatus(cloudManager, logger) {
   console.log(chalk.green('\n📋 DEPLOYMENT STATUS'));
-  console.log(chalk.green('=' .repeat(40)));
+  console.log(chalk.green('='.repeat(40)));
 
   const spinner = ora('Checking deployment status...').start();
   
@@ -335,8 +335,8 @@ async function showDeploymentStatus(cloudManager, logger) {
     } else {
       deployments.forEach((deployment, index) => {
         const statusColor = deployment.status === 'Running' || deployment.status === 'Healthy' ? chalk.green :
-                           deployment.status === 'Starting' ? chalk.yellow :
-                           chalk.red;
+          deployment.status === 'Starting' ? chalk.yellow :
+            chalk.red;
         
         console.log(`${index + 1}. ${chalk.bold(deployment.name)}`);
         console.log(`   Type: ${deployment.type}`);
@@ -354,7 +354,7 @@ async function showDeploymentStatus(cloudManager, logger) {
 
 async function showDeploymentHelp() {
   console.log(chalk.yellow('\n📖 DEPLOYMENT HELP'));
-  console.log(chalk.yellow('=' .repeat(30)));
+  console.log(chalk.yellow('='.repeat(30)));
   
   console.log(chalk.blue('\n🔧 Usage Examples:'));
   console.log(chalk.gray('• rig deploy --file infrastructure.yaml'));

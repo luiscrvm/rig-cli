@@ -694,7 +694,7 @@ variable "region" {
     fs.writeFileSync(path.join(moduleDir, 'main.tf'), mainTf);
   }
 
-  async generateVPCModuleFromResources(moduleDir, items, options) {
+  async generateNetworkModuleFromResources(moduleDir, items, options) {
     // Stub implementation for network resources
     const mainTf = `# Network module generated from existing resources  
 # TODO: Implement network resource generation`;

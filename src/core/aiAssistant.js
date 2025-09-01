@@ -212,9 +212,9 @@ DB_NAME="$1"
 BACKUP_DIR="/backups"
 
 echo "Starting backup of $DB_NAME..."
-mysqldump -u root -p $DB_NAME > "$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql"
-gzip "$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql"
-echo "Backup completed: ${DB_NAME}_${TIMESTAMP}.sql.gz"`,
+mysqldump -u root -p $DB_NAME > "$BACKUP_DIR/\${DB_NAME}_\${TIMESTAMP}.sql"
+gzip "$BACKUP_DIR/\${DB_NAME}_\${TIMESTAMP}.sql"
+echo "Backup completed: \${DB_NAME}_\${TIMESTAMP}.sql.gz"`,
         python: `#!/usr/bin/env python3
 import subprocess
 import datetime

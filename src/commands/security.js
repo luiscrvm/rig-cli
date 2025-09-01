@@ -11,7 +11,7 @@ export async function security(options) {
   const logger = new Logger();
 
   console.log(chalk.cyan.bold('\n🔒 SECURITY ANALYSIS'));
-  console.log(chalk.cyan('=' .repeat(50)));
+  console.log(chalk.cyan('='.repeat(50)));
 
   try {
     if (!options.scan && !options.compliance && !options.report) {
@@ -337,7 +337,7 @@ async function generateSecurityReport(cloudManager, aiAssistant, _logger) {
     spinner.succeed('Security report generated');
     
     console.log(chalk.cyan.bold('\n📊 SECURITY REPORT'));
-    console.log(chalk.cyan('=' .repeat(50)));
+    console.log(chalk.cyan('='.repeat(50)));
     
     console.log(chalk.white.bold('\n📈 SUMMARY:'));
     console.log(`• Total Resources: ${resources.reduce((acc, r) => acc + r.items.length, 0)}`);

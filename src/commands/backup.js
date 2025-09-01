@@ -11,7 +11,7 @@ export async function backup(options) {
   const cloudManager = new CloudManager();
 
   console.log(chalk.green.bold('\n💾 BACKUP & RESTORE'));
-  console.log(chalk.green('=' .repeat(40)));
+  console.log(chalk.green('='.repeat(40)));
 
   try {
     // If no specific action, show interactive menu
@@ -32,21 +32,21 @@ export async function backup(options) {
       ]);
       
       switch (action) {
-        case 'create':
-          options.create = true;
-          break;
-        case 'list':
-          options.list = true;
-          break;
-        case 'restore':
-          await selectAndRestoreBackup(cloudManager, logger);
-          return;
-        case 'delete':
-          await selectAndDeleteBackup(cloudManager, logger);
-          return;
-        case 'settings':
-          await showBackupSettings(logger);
-          return;
+      case 'create':
+        options.create = true;
+        break;
+      case 'list':
+        options.list = true;
+        break;
+      case 'restore':
+        await selectAndRestoreBackup(cloudManager, logger);
+        return;
+      case 'delete':
+        await selectAndDeleteBackup(cloudManager, logger);
+        return;
+      case 'settings':
+        await showBackupSettings(logger);
+        return;
       }
     }
 
@@ -79,7 +79,7 @@ export async function backup(options) {
 
 async function createBackup(cloudManager, logger, options) {
   console.log(chalk.cyan('\n📦 CREATING BACKUP'));
-  console.log(chalk.cyan('=' .repeat(30)));
+  console.log(chalk.cyan('='.repeat(30)));
 
   // Prompt for backup type if not specified
   const { backupType } = await inquirer.prompt([
@@ -120,20 +120,20 @@ async function createBackup(cloudManager, logger, options) {
     };
 
     switch (backupType) {
-      case 'infrastructure':
-        await backupInfrastructure(backupDir, backupManifest, logger);
-        break;
-      case 'resources':
-        await backupCloudResources(backupDir, backupManifest, cloudManager, logger);
-        break;
-      case 'application':
-        await backupApplicationConfigs(backupDir, backupManifest, logger);
-        break;
-      case 'complete':
-        await backupInfrastructure(backupDir, backupManifest, logger);
-        await backupCloudResources(backupDir, backupManifest, cloudManager, logger);
-        await backupApplicationConfigs(backupDir, backupManifest, logger);
-        break;
+    case 'infrastructure':
+      await backupInfrastructure(backupDir, backupManifest, logger);
+      break;
+    case 'resources':
+      await backupCloudResources(backupDir, backupManifest, cloudManager, logger);
+      break;
+    case 'application':
+      await backupApplicationConfigs(backupDir, backupManifest, logger);
+      break;
+    case 'complete':
+      await backupInfrastructure(backupDir, backupManifest, logger);
+      await backupCloudResources(backupDir, backupManifest, cloudManager, logger);
+      await backupApplicationConfigs(backupDir, backupManifest, logger);
+      break;
     }
 
     // Save backup manifest
@@ -142,7 +142,7 @@ async function createBackup(cloudManager, logger, options) {
 
     spinner.succeed(`Backup created successfully: ${backupId}`);
     
-    console.log(chalk.green(`\n✅ Backup Complete!`));
+    console.log(chalk.green('\n✅ Backup Complete!'));
     console.log(chalk.gray(`Backup ID: ${backupId}`));
     console.log(chalk.gray(`Location: ${backupDir}`));
     console.log(chalk.gray(`Type: ${backupType}`));
@@ -276,7 +276,7 @@ function getDirectorySize(dirPath) {
 
 async function listBackups(cloudManager, logger) {
   console.log(chalk.cyan('\n📋 AVAILABLE BACKUPS'));
-  console.log(chalk.cyan('=' .repeat(35)));
+  console.log(chalk.cyan('='.repeat(35)));
 
   const backupsDir = path.join(process.cwd(), '.backups');
   
@@ -386,7 +386,7 @@ async function selectAndRestoreBackup(cloudManager, logger) {
 
 async function restoreBackup(cloudManager, logger, backupId) {
   console.log(chalk.yellow(`\n🔄 RESTORING BACKUP: ${backupId}`));
-  console.log(chalk.yellow('=' .repeat(50)));
+  console.log(chalk.yellow('='.repeat(50)));
 
   const backupPath = path.join(process.cwd(), '.backups', backupId);
   const manifestPath = path.join(backupPath, 'backup-manifest.json');
@@ -440,7 +440,7 @@ async function restoreBackup(cloudManager, logger, backupId) {
 
     spinner.succeed(`Restore completed: ${restoredCount} items restored`);
     
-    console.log(chalk.green(`\n✅ Restore Complete!`));
+    console.log(chalk.green('\n✅ Restore Complete!'));
     console.log(chalk.gray(`Backup: ${backupId}`));
     console.log(chalk.gray(`Items restored: ${restoredCount}/${manifest.contents.length}`));
     
@@ -497,7 +497,7 @@ async function selectAndDeleteBackup(cloudManager, logger) {
 
 async function showBackupSettings(logger) {
   console.log(chalk.blue('\n⚙️  BACKUP SETTINGS'));
-  console.log(chalk.blue('=' .repeat(30)));
+  console.log(chalk.blue('='.repeat(30)));
   
   console.log(chalk.green('\n📁 Backup Location:'));
   console.log(chalk.gray(`• Local: ${path.join(process.cwd(), '.backups')}`));

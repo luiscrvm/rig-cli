@@ -311,7 +311,7 @@ async function fetchCloudLogs(options) {
         console.log(chalk.yellow('\n💡 Alternative Solutions:'));
         console.log(chalk.gray('• Use local logs: rig logs --error --limit 50'));
         console.log(chalk.gray('• Switch GCP project: rig init (to reconfigure)'));
-        console.log(chalk.gray(`• Check current project: gcloud config get-value project`));
+        console.log(chalk.gray('• Check current project: gcloud config get-value project'));
       }
       
       return;

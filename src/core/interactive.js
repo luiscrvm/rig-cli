@@ -351,6 +351,7 @@ export class InteractiveMode {
   }
 
   async managementMode() {
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       console.log(chalk.yellow('\n⚠️  MANAGEMENT MODE - You can create, modify, and delete resources'));
       

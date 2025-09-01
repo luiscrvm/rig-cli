@@ -19,7 +19,7 @@ export async function generate(type, options) {
   const projectAnalyzer = new ProjectAnalyzer(cloudManager);
 
   console.log(chalk.green.bold('\n🏗️  INFRASTRUCTURE GENERATOR'));
-  console.log(chalk.green('=' .repeat(50)));
+  console.log(chalk.green('='.repeat(50)));
 
   try {
     if (!type) {
@@ -106,7 +106,7 @@ async function generateTerraform(options, analysis, cloudManager, aiAssistant, l
   const generator = new TerraformGenerator(cloudManager, aiAssistant, logger);
   
   console.log(chalk.blue.bold('\n🏗️  TERRAFORM GENERATION'));
-  console.log(chalk.blue('=' .repeat(40)));
+  console.log(chalk.blue('='.repeat(40)));
 
   if (options.module) {
     await generator.generateModule(options.module, analysis, options);
@@ -119,7 +119,7 @@ async function generateKubernetes(options, analysis, cloudManager, aiAssistant, 
   const generator = new KubernetesGenerator(cloudManager, aiAssistant, logger);
   
   console.log(chalk.cyan.bold('\n⚡ KUBERNETES GENERATION'));
-  console.log(chalk.cyan('=' .repeat(40)));
+  console.log(chalk.cyan('='.repeat(40)));
 
   if (options.helm) {
     await generator.generateHelmChart(analysis, options);
@@ -134,7 +134,7 @@ async function generateDocker(options, analysis, aiAssistant, logger) {
   const generator = new DockerGenerator(aiAssistant, logger);
   
   console.log(chalk.magenta.bold('\n🐳 DOCKER GENERATION'));
-  console.log(chalk.magenta('=' .repeat(40)));
+  console.log(chalk.magenta('='.repeat(40)));
 
   await generator.generateConfigurations(analysis, options);
 }
@@ -143,7 +143,7 @@ async function generateCICD(options, analysis, aiAssistant, logger) {
   const generator = new CICDGenerator(aiAssistant, logger);
   
   console.log(chalk.yellow.bold('\n🔄 CI/CD GENERATION'));
-  console.log(chalk.yellow('=' .repeat(40)));
+  console.log(chalk.yellow('='.repeat(40)));
 
   if (options.github) {
     await generator.generateGitHubActions(analysis, options);
@@ -158,7 +158,7 @@ async function generateMonitoring(options, analysis, cloudManager, aiAssistant, 
   const generator = new MonitoringGenerator(cloudManager, aiAssistant, logger);
   
   console.log(chalk.red.bold('\n📊 MONITORING GENERATION'));
-  console.log(chalk.red('=' .repeat(40)));
+  console.log(chalk.red('='.repeat(40)));
 
   if (options.prometheus) {
     await generator.generatePrometheus(analysis, options);
@@ -173,7 +173,7 @@ async function generateSecurityConfigs(options, analysis, cloudManager, aiAssist
   const generator = new SecurityConfigGenerator(cloudManager, aiAssistant, logger);
   
   console.log(chalk.red.bold('\n🛡️  SECURITY CONFIG GENERATION'));
-  console.log(chalk.red('=' .repeat(40)));
+  console.log(chalk.red('='.repeat(40)));
   console.log(chalk.gray('Note: This generates security configuration files, not security analysis'));
   console.log(chalk.gray('For security analysis, use: rig security\n'));
 
@@ -188,7 +188,7 @@ async function generateSecurityConfigs(options, analysis, cloudManager, aiAssist
 
 async function analyzeProject(projectAnalyzer, logger) {
   console.log(chalk.green.bold('\n🔍 PROJECT ANALYSIS'));
-  console.log(chalk.green('=' .repeat(40)));
+  console.log(chalk.green('='.repeat(40)));
 
   const spinner = ora('Analyzing project structure and dependencies...').start();
   
@@ -230,7 +230,7 @@ async function analyzeProject(projectAnalyzer, logger) {
 
 async function generateCompleteStack(options, analysis, cloudManager, aiAssistant, logger) {
   console.log(chalk.rainbow.bold('\n🚀 COMPLETE STACK GENERATION'));
-  console.log(chalk.rainbow('=' .repeat(40)));
+  console.log(chalk.rainbow('='.repeat(40)));
 
   const components = await selectStackComponents(analysis);
   

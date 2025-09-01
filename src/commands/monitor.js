@@ -11,7 +11,7 @@ export async function monitor(options) {
   const aiAssistant = new AIAssistant();
 
   console.log(chalk.blue.bold('\n📊 INFRASTRUCTURE MONITORING'));
-  console.log(chalk.blue('=' .repeat(50)));
+  console.log(chalk.blue('='.repeat(50)));
 
   try {
     // If no specific options, show interactive menu
@@ -32,29 +32,30 @@ export async function monitor(options) {
       ]);
       
       switch (action) {
-        case 'metrics':
-          options.metrics = true;
-          break;
-        case 'alerts':
-          options.alerts = true;
-          break;
-        case 'service':
-          const { serviceName } = await inquirer.prompt([
-            {
-              type: 'input',
-              name: 'serviceName',
-              message: 'Enter service name to monitor:',
-              default: 'web-server'
-            }
-          ]);
-          options.service = serviceName;
-          break;
-        case 'overview':
-          options.overview = true;
-          break;
-        case 'events':
-          options.events = true;
-          break;
+      case 'metrics':
+        options.metrics = true;
+        break;
+      case 'alerts':
+        options.alerts = true;
+        break;
+      case 'service': {
+        const { serviceName } = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'serviceName',
+            message: 'Enter service name to monitor:',
+            default: 'web-server'
+          }
+        ]);
+        options.service = serviceName;
+        break;
+      }
+      case 'overview':
+        options.overview = true;
+        break;
+      case 'events':
+        options.events = true;
+        break;
       }
     }
 
@@ -94,7 +95,7 @@ export async function monitor(options) {
 
 async function showMetrics(cloudManager, logger, serviceName) {
   console.log(chalk.cyan('\n📈 INFRASTRUCTURE METRICS'));
-  console.log(chalk.cyan('=' .repeat(40)));
+  console.log(chalk.cyan('='.repeat(40)));
 
   const spinner = ora('Fetching infrastructure metrics...').start();
 
@@ -170,7 +171,7 @@ function showSampleMetrics(serviceName) {
 
 async function showAlerts(cloudManager, logger) {
   console.log(chalk.yellow('\n🚨 ACTIVE ALERTS'));
-  console.log(chalk.yellow('=' .repeat(30)));
+  console.log(chalk.yellow('='.repeat(30)));
 
   const spinner = ora('Checking for active alerts...').start();
 
@@ -201,8 +202,8 @@ async function showAlerts(cloudManager, logger) {
       
       alerts.forEach((alert, index) => {
         const severityColor = alert.severity === 'CRITICAL' ? chalk.red :
-                             alert.severity === 'WARNING' ? chalk.yellow :
-                             chalk.blue;
+          alert.severity === 'WARNING' ? chalk.yellow :
+            chalk.blue;
         
         console.log(`${index + 1}. ${severityColor(alert.severity)} - ${alert.service}`);
         console.log(`   ${alert.message}`);
@@ -218,7 +219,7 @@ async function showAlerts(cloudManager, logger) {
 
 async function monitorService(cloudManager, logger, serviceName) {
   console.log(chalk.cyan(`\n🔍 SERVICE MONITORING: ${serviceName}`));
-  console.log(chalk.cyan('=' .repeat(50)));
+  console.log(chalk.cyan('='.repeat(50)));
 
   const spinner = ora(`Monitoring ${serviceName} health...`).start();
 
@@ -254,7 +255,7 @@ async function monitorService(cloudManager, logger, serviceName) {
 
 async function showOverview(cloudManager, logger) {
   console.log(chalk.green('\n🏗️  INFRASTRUCTURE OVERVIEW'));
-  console.log(chalk.green('=' .repeat(50)));
+  console.log(chalk.green('='.repeat(50)));
 
   const spinner = ora('Gathering infrastructure overview...').start();
 
@@ -303,7 +304,7 @@ async function showOverview(cloudManager, logger) {
 
 async function showRecentEvents(cloudManager, logger) {
   console.log(chalk.magenta('\n🕒 RECENT INFRASTRUCTURE EVENTS'));
-  console.log(chalk.magenta('=' .repeat(50)));
+  console.log(chalk.magenta('='.repeat(50)));
 
   const spinner = ora('Fetching recent events...').start();
 
@@ -344,9 +345,9 @@ async function showRecentEvents(cloudManager, logger) {
     
     events.forEach((event, index) => {
       const typeColor = event.type === 'ERROR' ? chalk.red :
-                       event.type === 'WARNING' ? chalk.yellow :
-                       event.type === 'SUCCESS' ? chalk.green :
-                       chalk.blue;
+        event.type === 'WARNING' ? chalk.yellow :
+          event.type === 'SUCCESS' ? chalk.green :
+            chalk.blue;
       
       console.log(`${index + 1}. [${typeColor(event.type)}] ${event.service}`);
       console.log(`   ${event.event}`);

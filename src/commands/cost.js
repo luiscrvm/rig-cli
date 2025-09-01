@@ -11,7 +11,7 @@ export async function cost(options) {
   const logger = new Logger();
 
   console.log(chalk.green.bold('\n💰 COST ANALYSIS'));
-  console.log(chalk.green('=' .repeat(50)));
+  console.log(chalk.green('='.repeat(50)));
 
   try {
     if (!options.analyze && !options.optimize && !options.report && !options.forecast) {
@@ -520,7 +520,7 @@ async function generateCostReport(cloudManager, aiAssistant, _logger) {
     spinner.succeed('Cost report generated');
     
     console.log(chalk.green.bold('\n📋 COMPREHENSIVE COST REPORT'));
-    console.log(chalk.green('=' .repeat(60)));
+    console.log(chalk.green('='.repeat(60)));
     
     console.log(chalk.white.bold('\n📊 EXECUTIVE SUMMARY:'));
     console.log(`• Current Monthly Spend: ${chalk.green('$' + costAnalysis.totalMonthlyCost.toFixed(2))}`);
