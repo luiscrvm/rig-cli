@@ -3,6 +3,7 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import yaml from 'js-yaml';
 import fs from 'fs';
+import path from 'path';
 import { CloudManager } from '../core/cloudManager.js';
 import { AIAssistant } from '../core/aiAssistant.js';
 import { Logger } from '../utils/logger.js';
@@ -232,33 +233,31 @@ async function analyzeProject(projectAnalyzer, logger) {
 
 async function generateCompleteStack(options, analysis, cloudManager, aiAssistant, logger) {
   console.log(chalk.cyan.bold('\n🚀 COMPLETE STACK GENERATION'));
-  console.log(chalk.cyan('='.repeat(40)));
+  console.log(chalk.cyan('='.repeat(50)));
   
-  // Display detected services and infrastructure
-  console.log(chalk.white.bold('\n📋 DETECTED INFRASTRUCTURE:'));
+  // Generate and display the infrastructure analysis report
+  const report = await generateInfrastructureReport(analysis);
   
-  if (analysis.techStack.length > 0) {
-    console.log(chalk.green(`  Tech Stack: ${analysis.techStack.join(', ')}`));
-  }
+  // Display the report on screen
+  console.log(report.display);
   
-  if (analysis.databases.length > 0) {
-    console.log(chalk.blue(`  Databases: ${analysis.databases.map(d => d.type).join(', ')}`));
-  }
+  // Save the report to markdown
+  await saveInfrastructureReport(report.markdown, analysis.projectName);
   
-  if (analysis.caches.length > 0) {
-    console.log(chalk.yellow(`  Caches: ${analysis.caches.map(c => c.type).join(', ')}`));
-  }
+  // Ask user if they want to proceed with generation
+  const { proceedWithGeneration } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'proceedWithGeneration',
+      message: '\nWould you like to proceed with infrastructure generation based on this analysis?',
+      default: true
+    }
+  ]);
   
-  if (analysis.queues.length > 0) {
-    console.log(chalk.magenta(`  Queues: ${analysis.queues.map(q => q.type).join(', ')}`));
-  }
-  
-  if (analysis.ports.length > 0) {
-    console.log(chalk.cyan(`  Detected Ports: ${analysis.ports.map(p => p.host).join(', ')}`));
-  }
-  
-  if (analysis.runningServices.length > 0) {
-    console.log(chalk.green(`  Running Services: ${analysis.runningServices.join(', ')}`));
+  if (!proceedWithGeneration) {
+    console.log(chalk.yellow('\n📝 Analysis report saved to infra-reports/'));
+    console.log(chalk.gray('Review the report and run "rig generate stack" when ready.'));
+    return;
   }
 
   // Auto-select components based on analysis
@@ -460,4 +459,208 @@ async function generateDockerCompose(options, analysis, aiAssistant, logger) {
   fs.writeFileSync('docker-compose.generated.yml', composeYaml);
   
   console.log(chalk.green('✅ Generated docker-compose.generated.yml with all detected services'));
+}
+
+async function generateInfrastructureReport(analysis) {
+  const report = {
+    display: '',
+    markdown: ''
+  };
+  
+  // Build display report (for console)
+  let display = chalk.white.bold('\n📊 INFRASTRUCTURE ANALYSIS REPORT\n');
+  display += chalk.gray('='.repeat(50)) + '\n';
+  
+  // Project Overview
+  display += chalk.yellow.bold('\n🏗️  PROJECT OVERVIEW\n');
+  display += `  • Project: ${chalk.cyan(analysis.projectName)}\n`;
+  display += `  • Type: ${chalk.cyan(analysis.projectType || 'Not detected')}\n`;
+  display += `  • Tech Stack: ${chalk.cyan(analysis.techStack.join(', ') || 'Not detected')}\n`;
+  display += `  • Package Manager: ${chalk.cyan(analysis.packageManager || 'Not detected')}\n`;
+  
+  // Detected Services
+  display += chalk.yellow.bold('\n🔍 DETECTED SERVICES\n');
+  
+  if (analysis.databases.length > 0) {
+    display += chalk.blue('  Databases:\n');
+    analysis.databases.forEach(db => {
+      display += `    • ${db.type}${db.package ? ` (${db.package})` : ''}\n`;
+    });
+  }
+  
+  if (analysis.caches.length > 0) {
+    display += chalk.magenta('  Caching:\n');
+    analysis.caches.forEach(cache => {
+      display += `    • ${cache.type}${cache.package ? ` (${cache.package})` : ''}\n`;
+    });
+  }
+  
+  if (analysis.queues.length > 0) {
+    display += chalk.yellow('  Message Queues:\n');
+    analysis.queues.forEach(queue => {
+      display += `    • ${queue.type}${queue.package ? ` (${queue.package})` : ''}\n`;
+    });
+  }
+  
+  if (analysis.storage.length > 0) {
+    display += chalk.green('  Storage:\n');
+    analysis.storage.forEach(storage => {
+      display += `    • ${storage.type}${storage.package ? ` (${storage.package})` : ''}\n`;
+    });
+  }
+  
+  if (analysis.ports.length > 0) {
+    display += chalk.cyan('  Exposed Ports:\n');
+    analysis.ports.forEach(port => {
+      display += `    • ${port.host}${port.process ? ` (${port.process})` : ''}\n`;
+    });
+  }
+  
+  // Environment Configuration
+  if (Object.keys(analysis.envVariables).length > 0) {
+    display += chalk.yellow.bold('\n🔐 ENVIRONMENT CONFIGURATION\n');
+    const envKeys = Object.keys(analysis.envVariables).filter(k => 
+      !k.includes('PASSWORD') && !k.includes('SECRET') && !k.includes('KEY')
+    );
+    display += `  • ${envKeys.length} environment variables detected\n`;
+    display += `  • Sensitive variables masked\n`;
+  }
+  
+  // Existing Infrastructure
+  display += chalk.yellow.bold('\n📦 EXISTING INFRASTRUCTURE\n');
+  display += `  • Docker: ${analysis.hasDocker ? chalk.green('✓') : chalk.red('✗')}\n`;
+  display += `  • Kubernetes: ${analysis.hasKubernetes ? chalk.green('✓') : chalk.red('✗')}\n`;
+  display += `  • Terraform: ${analysis.hasTerraform ? chalk.green('✓') : chalk.red('✗')}\n`;
+  display += `  • CI/CD: ${analysis.hasCI ? chalk.green('✓') : chalk.red('✗')}\n`;
+  
+  // Cloud Resources
+  if (analysis.infrastructure) {
+    display += chalk.yellow.bold('\n☁️  CLOUD RESOURCES\n');
+    display += `  • Provider: ${chalk.cyan(analysis.infrastructure.provider)}\n`;
+    display += `  • Total Resources: ${chalk.cyan(analysis.infrastructure.resourceCount)}\n`;
+    display += `  • Resource Types: ${chalk.cyan(analysis.infrastructure.resourceTypes.join(', '))}\n`;
+    display += `  • Estimated Monthly Cost: ${chalk.green('$' + analysis.infrastructure.estimatedCost)}\n`;
+  }
+  
+  // Recommendations
+  if (analysis.recommendations.length > 0) {
+    display += chalk.yellow.bold('\n💡 RECOMMENDATIONS\n');
+    analysis.recommendations.forEach((rec, i) => {
+      display += `  ${i + 1}. ${rec}\n`;
+    });
+  }
+  
+  report.display = display;
+  
+  // Build markdown report
+  let markdown = '# Infrastructure Analysis Report\n\n';
+  markdown += `**Generated:** ${new Date().toISOString()}\n`;
+  markdown += `**Project:** ${analysis.projectName}\n\n`;
+  
+  markdown += '## Project Overview\n\n';
+  markdown += `- **Type:** ${analysis.projectType || 'Not detected'}\n`;
+  markdown += `- **Technology Stack:** ${analysis.techStack.join(', ') || 'Not detected'}\n`;
+  markdown += `- **Package Manager:** ${analysis.packageManager || 'Not detected'}\n`;
+  markdown += `- **Dependencies:** ${analysis.dependencies.length} packages\n\n`;
+  
+  markdown += '## Detected Services\n\n';
+  
+  if (analysis.databases.length > 0) {
+    markdown += '### Databases\n';
+    analysis.databases.forEach(db => {
+      markdown += `- ${db.type}${db.package ? ` (via ${db.package})` : ''}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (analysis.caches.length > 0) {
+    markdown += '### Caching\n';
+    analysis.caches.forEach(cache => {
+      markdown += `- ${cache.type}${cache.package ? ` (via ${cache.package})` : ''}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (analysis.queues.length > 0) {
+    markdown += '### Message Queues\n';
+    analysis.queues.forEach(queue => {
+      markdown += `- ${queue.type}${queue.package ? ` (via ${queue.package})` : ''}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (analysis.storage.length > 0) {
+    markdown += '### Storage\n';
+    analysis.storage.forEach(storage => {
+      markdown += `- ${storage.type}${storage.package ? ` (via ${storage.package})` : ''}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (analysis.ports.length > 0) {
+    markdown += '### Exposed Ports\n';
+    markdown += '| Port | Container Port | Process |\n';
+    markdown += '|------|---------------|--------|\n';
+    analysis.ports.forEach(port => {
+      markdown += `| ${port.host} | ${port.container} | ${port.process || 'N/A'} |\n`;
+    });
+    markdown += '\n';
+  }
+  
+  markdown += '## Infrastructure Status\n\n';
+  markdown += '| Component | Status |\n';
+  markdown += '|-----------|--------|\n';
+  markdown += `| Docker | ${analysis.hasDocker ? '✅ Configured' : '❌ Not found'} |\n`;
+  markdown += `| Kubernetes | ${analysis.hasKubernetes ? '✅ Configured' : '❌ Not found'} |\n`;
+  markdown += `| Terraform | ${analysis.hasTerraform ? '✅ Configured' : '❌ Not found'} |\n`;
+  markdown += `| CI/CD | ${analysis.hasCI ? '✅ Configured' : '❌ Not found'} |\n\n`;
+  
+  if (analysis.infrastructure) {
+    markdown += '## Cloud Resources\n\n';
+    markdown += `- **Provider:** ${analysis.infrastructure.provider}\n`;
+    markdown += `- **Total Resources:** ${analysis.infrastructure.resourceCount}\n`;
+    markdown += `- **Resource Types:** ${analysis.infrastructure.resourceTypes.join(', ')}\n`;
+    markdown += `- **Estimated Monthly Cost:** $${analysis.infrastructure.estimatedCost}\n\n`;
+  }
+  
+  if (analysis.recommendations.length > 0) {
+    markdown += '## Recommendations\n\n';
+    analysis.recommendations.forEach((rec, i) => {
+      markdown += `${i + 1}. ${rec}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  markdown += '## Next Steps\n\n';
+  markdown += '1. Review this analysis report\n';
+  markdown += '2. Run `rig generate stack` to generate complete infrastructure\n';
+  markdown += '3. Customize generated configurations as needed\n';
+  markdown += '4. Deploy using the generated scripts\n\n';
+  
+  markdown += '---\n';
+  markdown += '*Generated by Rig CLI Infrastructure Analyzer*\n';
+  
+  report.markdown = markdown;
+  
+  return report;
+}
+
+async function saveInfrastructureReport(markdown, projectName) {
+  const reportsDir = path.join(process.cwd(), 'infra-reports');
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+    console.log(chalk.green(`\n✅ Created infra-reports/ directory`));
+  }
+  
+  // Generate filename with timestamp
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const filename = `${projectName}-analysis-${timestamp}.md`;
+  const filepath = path.join(reportsDir, filename);
+  
+  // Save the report
+  fs.writeFileSync(filepath, markdown);
+  
+  console.log(chalk.green(`\n📝 Report saved to: ${chalk.cyan(`infra-reports/${filename}`)}`));
 }
