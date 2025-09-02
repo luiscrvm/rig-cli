@@ -48,8 +48,38 @@ export class GCloudAuth {
     }
   }
 
+  async checkBrowserAvailability() {
+    try {
+      const { platform } = process;
+      let testCommand;
+      
+      switch (platform) {
+      case 'darwin': // macOS
+        testCommand = 'which open';
+        break;
+      case 'win32': // Windows
+        testCommand = 'where start';
+        break;
+      default: // Linux and others
+        testCommand = 'which xdg-open';
+        break;
+      }
+      
+      await execAsync(testCommand);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   async authenticate() {
     console.log(chalk.cyan('\n🔐 Starting GCloud authentication...\n'));
+    
+    // Check if browser is available
+    const browserAvailable = await this.checkBrowserAvailability();
+    if (!browserAvailable) {
+      console.log(chalk.yellow('⚠️  Browser tools not available. Browser authentication may not work automatically.'));
+    }
     
     const { authMethod } = await inquirer.prompt([
       {
@@ -57,7 +87,10 @@ export class GCloudAuth {
         name: 'authMethod',
         message: 'Select authentication method:',
         choices: [
-          { name: 'Browser login (Recommended)', value: 'browser' },
+          { 
+            name: browserAvailable ? 'Browser login (Recommended)' : 'Browser login (Manual URL opening)', 
+            value: 'browser' 
+          },
           { name: 'Service account key file', value: 'service-account' },
           { name: 'Application default credentials', value: 'adc' }
         ]
@@ -86,7 +119,8 @@ export class GCloudAuth {
       console.log(chalk.yellow('\nA browser window will open for authentication.'));
       console.log(chalk.yellow('Please complete the login process.\n'));
       
-      const { stdout, stderr } = await execAsync('gcloud auth login --no-launch-browser');
+      // Try with browser launch first
+      const { stdout, stderr } = await execAsync('gcloud auth login');
       
       spinner.succeed('Authentication successful');
       
@@ -98,28 +132,112 @@ export class GCloudAuth {
       
       return false;
     } catch (error) {
-      spinner.fail('Authentication failed');
+      spinner.fail('Browser authentication failed');
       
-      if (error.message.includes('no-launch-browser')) {
-        console.log(chalk.yellow('\nPlease run the following command manually:'));
-        console.log(chalk.white('gcloud auth login'));
+      // Fallback to manual authentication
+      console.log(chalk.yellow('\n⚠️  Browser authentication failed. Trying alternative method...'));
+      return await this.fallbackBrowserAuth();
+    }
+  }
+
+  async fallbackBrowserAuth() {
+    try {
+      console.log(chalk.cyan('\n🔐 Alternative Browser Authentication'));
+      console.log(chalk.yellow('Opening authentication URL manually...'));
+      
+      // Use no-launch-browser to get the URL for manual opening
+      const { stdout, stderr } = await execAsync('gcloud auth login --no-launch-browser', {
+        timeout: 30000 // 30 second timeout
+      });
+      
+      // Extract the auth URL from the output
+      const urlMatch = stdout.match(/https:\/\/accounts\.google\.com\/o\/oauth2\/auth[^\s]+/);
+      if (urlMatch) {
+        const authUrl = urlMatch[0];
+        console.log(chalk.white('\n🌐 Please open this URL in your browser:'));
+        console.log(chalk.blue(authUrl));
         
-        const { completed } = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'completed',
-            message: 'Have you completed the authentication?',
-            default: false
-          }
-        ]);
-        
-        if (completed) {
-          const authInfo = await this.checkAuthentication();
-          return authInfo.authenticated;
+        // Try to open the URL in the default browser
+        await this.openUrlInBrowser(authUrl);
+      }
+      
+      console.log(chalk.yellow('\n⏳ Waiting for authentication to complete...'));
+      
+      // Wait for user to complete authentication
+      const { completed } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'completed',
+          message: 'Have you completed the authentication in your browser?',
+          default: true
+        }
+      ]);
+      
+      if (completed) {
+        const authInfo = await this.checkAuthentication();
+        if (authInfo.authenticated) {
+          console.log(chalk.green(`✓ Authenticated as: ${authInfo.account}`));
+          return true;
+        } else {
+          console.log(chalk.red('❌ Authentication not detected. Please try again.'));
+          return false;
         }
       }
       
-      throw error;
+      return false;
+    } catch (error) {
+      console.error(chalk.red(`\n❌ Authentication failed: ${error.message}`));
+      
+      console.log(chalk.yellow('\n💡 Manual authentication steps:'));
+      console.log(chalk.white('1. Run: gcloud auth login'));
+      console.log(chalk.white('2. Complete the browser authentication'));
+      console.log(chalk.white('3. Return to this CLI'));
+      
+      const { retry } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'retry',
+          message: 'Would you like to check authentication status now?',
+          default: true
+        }
+      ]);
+      
+      if (retry) {
+        const authInfo = await this.checkAuthentication();
+        return authInfo.authenticated;
+      }
+      
+      return false;
+    }
+  }
+
+  async openUrlInBrowser(url) {
+    try {
+      const { exec } = await import('child_process');
+      const { platform } = process;
+      
+      let command;
+      switch (platform) {
+      case 'darwin': // macOS
+        command = `open "${url}"`;
+        break;
+      case 'win32': // Windows
+        command = `start "" "${url}"`;
+        break;
+      default: // Linux and others
+        command = `xdg-open "${url}"`;
+        break;
+      }
+      
+      exec(command, (error) => {
+        if (error) {
+          console.log(chalk.yellow('⚠️  Could not automatically open browser. Please open the URL manually.'));
+        } else {
+          console.log(chalk.green('✓ Browser opened automatically'));
+        }
+      });
+    } catch (error) {
+      console.log(chalk.yellow('⚠️  Could not automatically open browser. Please open the URL manually.'));
     }
   }
 
@@ -162,25 +280,57 @@ export class GCloudAuth {
     const spinner = ora('Setting up application default credentials...').start();
     
     try {
-      await execAsync('gcloud auth application-default login --no-launch-browser');
+      // First try with browser launch
+      await execAsync('gcloud auth application-default login');
       spinner.succeed('Application default credentials configured');
       return true;
     } catch (error) {
       spinner.fail('Failed to configure application default credentials');
       
-      console.log(chalk.yellow('\nPlease run the following command manually:'));
-      console.log(chalk.white('gcloud auth application-default login'));
-      
-      const { completed } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'completed',
-          message: 'Have you completed the authentication?',
-          default: false
+      // Fallback to manual process
+      try {
+        console.log(chalk.yellow('\n⚠️  Trying alternative method...'));
+        
+        const { stdout } = await execAsync('gcloud auth application-default login --no-launch-browser', {
+          timeout: 30000
+        });
+        
+        // Extract the auth URL from the output
+        const urlMatch = stdout.match(/https:\/\/accounts\.google\.com\/o\/oauth2\/auth[^\s]+/);
+        if (urlMatch) {
+          const authUrl = urlMatch[0];
+          console.log(chalk.white('\n🌐 Please open this URL in your browser:'));
+          console.log(chalk.blue(authUrl));
+          
+          // Try to open the URL in the default browser
+          await this.openUrlInBrowser(authUrl);
         }
-      ]);
-      
-      return completed;
+        
+        const { completed } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'completed',
+            message: 'Have you completed the authentication in your browser?',
+            default: true
+          }
+        ]);
+        
+        return completed;
+      } catch (fallbackError) {
+        console.log(chalk.yellow('\n💡 Please run the following command manually:'));
+        console.log(chalk.white('gcloud auth application-default login'));
+        
+        const { completed } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'completed',
+            message: 'Have you completed the authentication?',
+            default: false
+          }
+        ]);
+        
+        return completed;
+      }
     }
   }
 
