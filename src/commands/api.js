@@ -31,7 +31,7 @@ export async function apiCommand(options) {
     console.log(chalk.cyan(`\nProject: ${authInfo.project}`));
     console.log(chalk.cyan(`Account: ${authInfo.account}\n`));
 
-    if (!options.enable && !options.list && !options.check) {
+    if (!options.enable && !options.disable && !options.disableAll && !options.list && !options.check) {
       // Interactive mode
       const { action } = await inquirer.prompt([
         {
@@ -42,6 +42,8 @@ export async function apiCommand(options) {
             { name: '📋 List currently enabled APIs', value: 'list' },
             { name: '🔍 Check required API status', value: 'check' },
             { name: '⚡ Enable specific APIs', value: 'enable' },
+            { name: '🚫 Disable specific APIs', value: 'disable' },
+            { name: '🚫 Disable all non-essential APIs', value: 'disable-all' },
             { name: '🔄 Force re-enable all required APIs', value: 'force' },
             { name: '🧹 Clear API cache', value: 'clear-cache' }
           ]
@@ -57,6 +59,12 @@ export async function apiCommand(options) {
         break;
       case 'enable':
         await interactiveEnableApis(gcloudAuth, authInfo.project);
+        break;
+      case 'disable':
+        await interactiveDisableApis(gcloudAuth, authInfo.project);
+        break;
+      case 'disable-all':
+        await gcloudAuth.disableAllNonEssentialAPIs(authInfo.project, options.yes);
         break;
       case 'force':
         await gcloudAuth.enableAPIs(authInfo.project, true);
@@ -78,6 +86,15 @@ export async function apiCommand(options) {
       if (options.enable) {
         const apis = options.enable.split(',').map(api => api.trim());
         await gcloudAuth.enableAPIs(authInfo.project, options.force, apis);
+      }
+
+      if (options.disable) {
+        const apis = options.disable.split(',').map(api => api.trim());
+        await gcloudAuth.disableAPIs(authInfo.project, apis, options.yes);
+      }
+
+      if (options.disableAll) {
+        await gcloudAuth.disableAllNonEssentialAPIs(authInfo.project, options.yes);
       }
     }
 
@@ -244,6 +261,85 @@ async function interactiveEnableApis(gcloudAuth, projectId) {
 
   if (apisToEnable.length > 0) {
     await gcloudAuth.enableAPIs(projectId, false, apisToEnable);
+  }
+}
+
+async function interactiveDisableApis(gcloudAuth, projectId) {
+  const { execAsync } = await import('util');
+  const { promisify } = await import('util');
+  const exec = promisify((await import('child_process')).exec);
+
+  try {
+    console.log(chalk.red('\n🚫 Interactive API Disabling\n'));
+    
+    // Get currently enabled APIs
+    const { stdout } = await exec(`gcloud services list --enabled --project=${projectId} --format=json`);
+    const enabledServices = JSON.parse(stdout);
+    
+    if (enabledServices.length === 0) {
+      console.log(chalk.yellow('No APIs are currently enabled.\n'));
+      return;
+    }
+
+    const essentialApis = gcloudAuth.getEssentialApis();
+    
+    // Create choices with warnings for essential APIs
+    const apiChoices = enabledServices.map(service => {
+      const isEssential = essentialApis.includes(service.config.name);
+      const warning = isEssential ? chalk.red(' [ESSENTIAL - May break CLI]') : '';
+      
+      return {
+        name: `${service.config.name} - ${service.config.title}${warning}`,
+        value: service.config.name
+      };
+    });
+
+    const { apisToDisable } = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'apisToDisable',
+        message: 'Select APIs to disable (use arrow keys and spacebar):',
+        choices: apiChoices,
+        validate: input => {
+          if (input.length === 0) {
+            return 'Please select at least one API to disable.';
+          }
+          return true;
+        }
+      }
+    ]);
+
+    if (apisToDisable.length > 0) {
+      // Check if user selected essential APIs
+      const selectedEssential = apisToDisable.filter(api => essentialApis.includes(api));
+      
+      if (selectedEssential.length > 0) {
+        console.log(chalk.red('\n⚠️  WARNING: You selected essential APIs that may break Rig CLI functionality:'));
+        selectedEssential.forEach(api => {
+          console.log(chalk.red(`  • ${api}`));
+        });
+        console.log();
+
+        const { confirmEssential } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'confirmEssential',
+            message: 'Do you still want to disable these essential APIs?',
+            default: false
+          }
+        ]);
+
+        if (!confirmEssential) {
+          console.log(chalk.yellow('❌ API disabling cancelled\n'));
+          return;
+        }
+      }
+
+      await gcloudAuth.disableAPIs(projectId, apisToDisable, false);
+    }
+
+  } catch (error) {
+    console.log(chalk.red(`\n❌ Failed to get API list: ${error.message}\n`));
   }
 }
 

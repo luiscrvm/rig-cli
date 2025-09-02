@@ -559,6 +559,280 @@ export class GCloudAuth {
     }
   }
 
+  async disableAPIs(projectId, apisToDisable, skipConfirmation = false) {
+    if (!apisToDisable || apisToDisable.length === 0) {
+      console.log(chalk.yellow('⚠️  No APIs specified to disable.\n'));
+      return;
+    }
+
+    console.log(chalk.red('\n🚫 Disabling GCP APIs...\n'));
+
+    // Get list of currently enabled APIs first
+    const spinner = ora('Checking current API status...').start();
+    
+    try {
+      const { stdout } = await execAsync(`gcloud services list --enabled --project=${projectId} --format=json`);
+      const enabledServices = JSON.parse(stdout);
+      const enabledApiNames = enabledServices.map(service => service.config.name);
+      
+      spinner.text = 'Validating APIs to disable...';
+      
+      // Filter to only APIs that are actually enabled
+      const validApisToDisable = apisToDisable.filter(api => {
+        const isEnabled = enabledApiNames.includes(api);
+        if (!isEnabled) {
+          console.log(chalk.yellow(`  ⚠️  ${api} is already disabled`));
+        }
+        return isEnabled;
+      });
+
+      if (validApisToDisable.length === 0) {
+        spinner.succeed('No APIs need to be disabled');
+        console.log(chalk.green('✅ All specified APIs are already disabled\n'));
+        return;
+      }
+
+      spinner.stop();
+
+      // Check for essential APIs and warn user
+      const essentialApis = this.getEssentialApis();
+      const essentialApisToDisable = validApisToDisable.filter(api => essentialApis.includes(api));
+      
+      if (essentialApisToDisable.length > 0 && !skipConfirmation) {
+        console.log(chalk.red('⚠️  WARNING: You are about to disable essential APIs:'));
+        essentialApisToDisable.forEach(api => {
+          console.log(chalk.red(`  • ${api} - ${this.getApiDescription(api)}`));
+        });
+        console.log(chalk.yellow('\nDisabling these APIs may break Rig CLI functionality!\n'));
+      }
+
+      // Show what will be disabled
+      console.log(chalk.white(`APIs to be disabled (${validApisToDisable.length}):\n`));
+      validApisToDisable.forEach(api => {
+        const isEssential = essentialApis.includes(api);
+        const warning = isEssential ? chalk.red(' [ESSENTIAL - May break CLI]') : '';
+        console.log(`  🚫 ${api}${warning}`);
+        console.log(`     ${chalk.gray(this.getApiDescription(api))}`);
+      });
+      console.log();
+
+      // Confirmation prompt (unless skipped)
+      if (!skipConfirmation) {
+        const { confirmed } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'confirmed',
+            message: 'Are you sure you want to disable these APIs?',
+            default: false
+          }
+        ]);
+
+        if (!confirmed) {
+          console.log(chalk.yellow('❌ API disabling cancelled by user\n'));
+          return;
+        }
+      }
+
+      // Disable APIs one by one
+      const disableSpinner = ora('Disabling APIs...').start();
+      let disabledCount = 0;
+      let failedCount = 0;
+      
+      for (const api of validApisToDisable) {
+        try {
+          disableSpinner.text = `Disabling ${api}...`;
+          await execAsync(`gcloud services disable ${api} --project=${projectId}`);
+          console.log(chalk.red(`  🚫 ${api} disabled`));
+          disabledCount++;
+        } catch (error) {
+          console.log(chalk.red(`  ❌ Failed to disable ${api}: ${error.message}`));
+          this.logger.warn(`Failed to disable ${api}: ${error.message}`);
+          failedCount++;
+        }
+      }
+
+      if (disabledCount > 0) {
+        disableSpinner.succeed(`Successfully disabled ${disabledCount} APIs`);
+        console.log(chalk.green(`\n✅ ${disabledCount} APIs disabled successfully`));
+      } else {
+        disableSpinner.warn('No APIs were disabled successfully');
+      }
+
+      if (failedCount > 0) {
+        console.log(chalk.yellow(`\n⚠️  ${failedCount} APIs failed to disable`));
+      }
+
+      // Clear API cache since status changed
+      await this.clearApiCache();
+
+      // Final warning if essential APIs were disabled
+      if (essentialApisToDisable.length > 0) {
+        console.log(chalk.red('\n⚠️  IMPORTANT: Essential APIs have been disabled.'));
+        console.log(chalk.yellow('You can re-enable them with: rig api --enable ' + essentialApisToDisable.join(',')));
+        console.log();
+      }
+
+    } catch (error) {
+      spinner.fail('Failed to disable APIs');
+      console.log(chalk.red(`\n❌ Error disabling APIs: ${error.message}`));
+      throw error;
+    }
+  }
+
+  async disableAllNonEssentialAPIs(projectId, skipConfirmation = false) {
+    console.log(chalk.red('\n🚫 Disabling All Non-Essential APIs...\n'));
+
+    const spinner = ora('Fetching enabled APIs...').start();
+
+    try {
+      const { stdout } = await execAsync(`gcloud services list --enabled --project=${projectId} --format=json`);
+      const enabledServices = JSON.parse(stdout);
+      const enabledApiNames = enabledServices.map(service => service.config.name);
+      
+      spinner.text = 'Identifying non-essential APIs...';
+      
+      const essentialApis = this.getEssentialApis();
+      const nonEssentialApis = enabledApiNames.filter(api => !essentialApis.includes(api));
+      
+      spinner.stop();
+
+      if (nonEssentialApis.length === 0) {
+        console.log(chalk.green('✅ No non-essential APIs found to disable\n'));
+        return;
+      }
+
+      console.log(chalk.white(`Found ${nonEssentialApis.length} non-essential APIs to disable:\n`));
+      
+      // Group APIs by category for better display
+      const categorizedApis = this.categorizeApis(nonEssentialApis);
+      
+      for (const [category, apis] of Object.entries(categorizedApis)) {
+        if (apis.length > 0) {
+          console.log(chalk.cyan(category));
+          apis.forEach(api => {
+            console.log(`  🚫 ${api}`);
+            console.log(`     ${chalk.gray(this.getApiDescription(api))}`);
+          });
+          console.log();
+        }
+      }
+
+      // Confirmation
+      if (!skipConfirmation) {
+        console.log(chalk.yellow('⚠️  This will disable all non-essential APIs while keeping core functionality intact.'));
+        console.log(chalk.white('Essential APIs that will remain enabled:'));
+        essentialApis.forEach(api => {
+          console.log(`  ✅ ${api}`);
+        });
+        console.log();
+
+        const { confirmed } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'confirmed', 
+            message: `Disable ${nonEssentialApis.length} non-essential APIs?`,
+            default: false
+          }
+        ]);
+
+        if (!confirmed) {
+          console.log(chalk.yellow('❌ Bulk API disabling cancelled by user\n'));
+          return;
+        }
+      }
+
+      // Disable all non-essential APIs
+      await this.disableAPIs(projectId, nonEssentialApis, true);
+
+    } catch (error) {
+      spinner.fail('Failed to fetch API list');
+      console.log(chalk.red(`\n❌ Error: ${error.message}`));
+      throw error;
+    }
+  }
+
+  getEssentialApis() {
+    return [
+      'compute.googleapis.com',
+      'storage-api.googleapis.com',
+      'cloudresourcemanager.googleapis.com',
+      'logging.googleapis.com',
+      'monitoring.googleapis.com',
+      'servicemanagement.googleapis.com',
+      'serviceusage.googleapis.com',
+      'iam.googleapis.com'
+    ];
+  }
+
+  getApiDescription(apiName) {
+    const descriptions = {
+      'compute.googleapis.com': 'Compute Engine API - Virtual machines and infrastructure',
+      'storage-api.googleapis.com': 'Cloud Storage API - Object storage and file management',
+      'cloudresourcemanager.googleapis.com': 'Resource Manager API - Project and resource management',
+      'logging.googleapis.com': 'Cloud Logging API - Log collection and analysis',
+      'monitoring.googleapis.com': 'Cloud Monitoring API - Metrics and alerting',
+      'container.googleapis.com': 'Kubernetes Engine API - Container orchestration',
+      'cloudsql.googleapis.com': 'Cloud SQL API - Managed relational databases',
+      'bigquery.googleapis.com': 'BigQuery API - Data warehouse and analytics',
+      'pubsub.googleapis.com': 'Pub/Sub API - Messaging and event streaming',
+      'cloudkms.googleapis.com': 'Cloud KMS API - Key management and encryption',
+      'servicemanagement.googleapis.com': 'Service Management API - API lifecycle management',
+      'serviceusage.googleapis.com': 'Service Usage API - API consumption tracking',
+      'iam.googleapis.com': 'Identity and Access Management API - User and permission management',
+      'dns.googleapis.com': 'Cloud DNS API - Domain name resolution',
+      'file.googleapis.com': 'Cloud Filestore API - Network attached storage',
+      'run.googleapis.com': 'Cloud Run API - Serverless container platform',
+      'functions.googleapis.com': 'Cloud Functions API - Serverless compute platform',
+      'appengine.googleapis.com': 'App Engine API - Platform as a Service',
+      'dataflow.googleapis.com': 'Cloud Dataflow API - Stream and batch processing',
+      'aiplatform.googleapis.com': 'AI Platform API - Machine learning services'
+    };
+    
+    return descriptions[apiName] || 'GCP service API';
+  }
+
+  categorizeApis(apis) {
+    const categories = {
+      '🖥️ Compute & Containers': [],
+      '💾 Storage & Databases': [],
+      '🌐 Networking': [],
+      '📊 Data & Analytics': [],
+      '🤖 AI & Machine Learning': [],
+      '📦 Other Services': []
+    };
+
+    apis.forEach(api => {
+      if (api.includes('compute') || api.includes('container') || api.includes('run') || api.includes('functions') || api.includes('appengine')) {
+        categories['🖥️ Compute & Containers'].push(api);
+      } else if (api.includes('storage') || api.includes('sql') || api.includes('file')) {
+        categories['💾 Storage & Databases'].push(api);
+      } else if (api.includes('network') || api.includes('dns')) {
+        categories['🌐 Networking'].push(api);
+      } else if (api.includes('bigquery') || api.includes('dataflow') || api.includes('pubsub')) {
+        categories['📊 Data & Analytics'].push(api);
+      } else if (api.includes('ai') || api.includes('ml') || api.includes('translate') || api.includes('aiplatform')) {
+        categories['🤖 AI & Machine Learning'].push(api);
+      } else {
+        categories['📦 Other Services'].push(api);
+      }
+    });
+
+    return categories;
+  }
+
+  async clearApiCache() {
+    try {
+      const cacheFile = path.join(process.env.HOME || process.env.USERPROFILE || '.', '.rig-cli', 'api-cache.json');
+      
+      if (fs.existsSync(cacheFile)) {
+        fs.unlinkSync(cacheFile);
+        this.logger.info('API cache cleared');
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to clear API cache: ${error.message}`);
+    }
+  }
+
   async getAuthInfo() {
     const authStatus = await this.checkAuthentication();
     const currentProject = await this.getCurrentProject();
