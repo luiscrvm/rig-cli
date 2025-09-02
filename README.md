@@ -214,10 +214,13 @@ rig logs --export csv --error
 ```
 
 ### `rig generate`
-Generate Infrastructure as Code configurations
+Generate Infrastructure as Code configurations with intelligent project analysis
 ```bash
-# Interactive generation menu
+# Interactive generation menu with project analysis
 rig generate
+
+# Generate complete infrastructure stack
+rig generate --analyze              # Analyze project and generate all components
 
 # Generate specific components
 rig generate terraform    # Terraform modules and configurations
@@ -228,10 +231,16 @@ rig generate monitoring  # Prometheus/Grafana stack
 rig generate security    # Security policies and configurations
 
 # Options
-rig generate --analyze              # Analyze project first
 rig generate --import               # Import existing cloud resources
 rig generate terraform -o ./infra  # Custom output directory
 rig generate --force               # Overwrite existing files
+
+# Features:
+# - Automatic detection of programming languages and frameworks
+# - Smart dependency analysis from package files
+# - Cloud resource discovery and import
+# - Production-ready configurations with best practices
+# - Comprehensive analysis reports
 ```
 
 ## Configuration
@@ -342,10 +351,16 @@ rig backup --restore backup-2024-01-20
 ```
 
 ### 6. Infrastructure as Code
-Generate production-ready configurations:
+Generate production-ready configurations with intelligent analysis:
 ```bash
 # Analyze current project and generate complete stack
 rig generate --analyze
+# This will:
+# 1. Analyze your project structure and detect technologies
+# 2. Scan for dependencies and frameworks
+# 3. Import existing cloud resources if available
+# 4. Generate complete infrastructure configurations
+# 5. Provide a detailed analysis report
 
 # Generate specific components
 rig generate terraform --import    # Import existing resources
@@ -353,6 +368,13 @@ rig generate kubernetes -o ./k8s   # Kubernetes manifests
 rig generate docker                # Containerization configs
 rig generate cicd                  # CI/CD pipelines
 rig generate monitoring            # Observability stack
+
+# The generator automatically:
+# - Detects Node.js, Python, Java, Go, and other languages
+# - Configures appropriate build and runtime settings
+# - Applies security best practices
+# - Creates multi-environment configurations
+# - Generates comprehensive documentation
 ```
 
 ### 7. Log Analysis and Monitoring
@@ -490,6 +512,22 @@ MIT License - See LICENSE file for details
 - Documentation: Check the docs/ folder
 - Community: Join our Discord server
 
+## Recent Updates
+
+### Latest Features (v1.2.0)
+- **Enhanced Stack Generation**: Complete infrastructure stack generation now analyzes actual cloud projects
+- **Automatic Service Detection**: Smart detection of project technologies and dependencies
+- **Improved Error Handling**: Better error messages and recovery for cloud operations
+- **Project Analysis Reports**: Detailed analysis reports when generating infrastructure
+- **Bug Fixes**: Fixed generators to use actual cloud project names instead of CLI tool name
+
+### Previous Updates (v1.1.0)
+- **Infrastructure as Code Generation**: Complete support for Terraform, Kubernetes, Docker, CI/CD
+- **Security Analysis**: Comprehensive vulnerability scanning and compliance checking
+- **Cost Optimization**: AI-powered cost analysis with forecasting and recommendations
+- **GCP Cloud Logging**: Advanced log filtering and export capabilities
+- **Local AI Support**: Ollama integration for offline AI assistance
+
 ## Roadmap
 
 - [x] Infrastructure as Code generation (Terraform, Kubernetes, Docker, CI/CD)
@@ -497,6 +535,8 @@ MIT License - See LICENSE file for details
 - [x] Security vulnerability scanning and compliance checking
 - [x] AI-powered cost analysis and optimization
 - [x] Local AI assistant with Ollama support
+- [x] Complete stack generation with project analysis
+- [x] Automatic service and technology detection
 - [ ] AWS CloudWatch and Azure Monitor log integration
 - [ ] Kubernetes cluster management and deployment
 - [ ] Slack/Teams notifications and alerts
