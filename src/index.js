@@ -146,4 +146,15 @@ program
     await generate(type, options);
   });
 
+program
+  .command('create [prompt]')
+  .description('AI-powered infrastructure creation from natural language')
+  .option('-ai, --ai <prompt>', 'AI prompt describing what to create')
+  .option('-o, --output <dir>', 'Output directory for generated infrastructure')
+  .option('--no-cicd', 'Skip CI/CD pipeline generation')
+  .action(async (prompt, options) => {
+    const { create } = await import('./commands/create.js');
+    await create(prompt, options);
+  });
+
 program.parse(process.argv);
