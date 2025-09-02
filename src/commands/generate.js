@@ -332,7 +332,7 @@ async function selectStackComponents(analysis) {
 }
 
 async function generateTerraformWithServices(options, analysis, cloudManager, aiAssistant, logger) {
-  const generator = new TerraformGenerator(cloudManager, aiAssistant);
+  const generator = new TerraformGenerator(cloudManager, aiAssistant, logger);
   
   // Enhanced options with detected services
   const enhancedOptions = {
@@ -345,11 +345,11 @@ async function generateTerraformWithServices(options, analysis, cloudManager, ai
     services: analysis.runningServices
   };
   
-  await generator.generate(enhancedOptions, analysis);
+  await generator.generateComplete(analysis, enhancedOptions);
 }
 
 async function generateKubernetesWithServices(options, analysis, cloudManager, aiAssistant, logger) {
-  const generator = new KubernetesGenerator(cloudManager, aiAssistant);
+  const generator = new KubernetesGenerator(cloudManager, aiAssistant, logger);
   
   // Enhanced options with detected services
   const enhancedOptions = {
@@ -362,11 +362,11 @@ async function generateKubernetesWithServices(options, analysis, cloudManager, a
     envVariables: analysis.envVariables
   };
   
-  await generator.generate(enhancedOptions, analysis);
+  await generator.generateComplete(analysis, enhancedOptions);
 }
 
 async function generateDockerWithServices(options, analysis, aiAssistant, logger) {
-  const generator = new DockerGenerator(aiAssistant);
+  const generator = new DockerGenerator(aiAssistant, logger);
   
   // Enhanced options with detected services
   const enhancedOptions = {
@@ -377,11 +377,11 @@ async function generateDockerWithServices(options, analysis, aiAssistant, logger
     envVariables: analysis.envVariables
   };
   
-  await generator.generate(enhancedOptions, analysis);
+  await generator.generateConfigurations(analysis, enhancedOptions);
 }
 
 async function generateDockerCompose(options, analysis, aiAssistant, logger) {
-  const generator = new DockerGenerator(aiAssistant);
+  const generator = new DockerGenerator(aiAssistant, logger);
   
   // Generate a complete docker-compose.yml with all detected services
   const composeConfig = {
@@ -1009,17 +1009,17 @@ function estimateResourceTypeCost(type, count) {
 // Simplified cloud-focused generation functions
 async function generateTerraformFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger) {
   const generator = new TerraformGenerator(cloudManager, aiAssistant, logger);
-  await generator.generate({ ...options, import: true }, cloudAnalysis);
+  await generator.generateComplete(cloudAnalysis, { ...options, import: true });
 }
 
 async function generateKubernetesFromCloud(options, cloudAnalysis, cloudManager, aiAssistant, logger) {
-  const generator = new KubernetesGenerator(cloudManager, aiAssistant);
-  await generator.generate(options, cloudAnalysis);
+  const generator = new KubernetesGenerator(cloudManager, aiAssistant, logger);
+  await generator.generateComplete(cloudAnalysis, options);
 }
 
 async function generateDockerFromCloud(options, cloudAnalysis, aiAssistant, logger) {
-  const generator = new DockerGenerator(aiAssistant);
-  await generator.generate(options, cloudAnalysis);
+  const generator = new DockerGenerator(aiAssistant, logger);
+  await generator.generateConfigurations(cloudAnalysis, options);
 }
 
 async function generateDockerComposeFromCloud(options, cloudAnalysis, aiAssistant, logger) {
