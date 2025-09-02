@@ -536,7 +536,7 @@ async function generateInfrastructureReport(analysis) {
       !k.includes('PASSWORD') && !k.includes('SECRET') && !k.includes('KEY')
     );
     display += `  • ${envKeys.length} environment variables detected\n`;
-    display += `  • Sensitive variables masked\n`;
+    display += '  • Sensitive variables masked\n';
   }
   
   // Existing Infrastructure
@@ -664,7 +664,7 @@ async function saveInfrastructureReport(markdown, projectName) {
   // Create directory if it doesn't exist
   if (!fs.existsSync(reportsDir)) {
     fs.mkdirSync(reportsDir, { recursive: true });
-    console.log(chalk.green(`\n✅ Created infra-reports/ directory`));
+    console.log(chalk.green('\n✅ Created infra-reports/ directory'));
   }
   
   // Generate filename with timestamp

@@ -160,7 +160,7 @@ Focus on practical, production-ready configurations appropriate for the project 
 `;
 
   try {
-    const response = await aiAssistant.getRecommendations('create', aiPrompt, context);
+    const response = await aiAssistant.getRecommendation(aiPrompt, context);
     
     // Parse AI response
     let interpretation;

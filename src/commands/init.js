@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import os from 'os';
-import ora from 'ora';
 import { GCloudAuth } from '../auth/gcloudAuth.js';
 import { OllamaAI } from '../core/ollamaAI.js';
 
@@ -264,23 +263,99 @@ async function configureGCP() {
 async function configureAI() {
   console.log(chalk.yellow('\n🤖 Configuring AI Assistant\n'));
 
-  const { aiProvider } = await inquirer.prompt([
+  const { configureMode } = await inquirer.prompt([
     {
       type: 'list',
-      name: 'aiProvider',
-      message: 'Select AI provider:',
+      name: 'configureMode',
+      message: 'AI configuration mode:',
       choices: [
-        { name: 'Ollama (Local, Free)', value: 'ollama' },
-        { name: 'OpenAI GPT-4', value: 'openai' },
-        { name: 'Anthropic Claude', value: 'anthropic' },
+        { name: 'Configure single AI provider (default)', value: 'single' },
+        { name: 'Configure multiple AI providers', value: 'multiple' },
         { name: 'None (Manual mode only)', value: 'none' }
       ]
     }
   ]);
 
-  const config = { provider: aiProvider };
+  if (configureMode === 'none') {
+    return { provider: 'none' };
+  }
 
-  if (aiProvider === 'ollama') {
+  const providers = {};
+  let primaryProvider = null;
+
+  if (configureMode === 'single') {
+    const { aiProvider } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'aiProvider',
+        message: 'Select AI provider:',
+        choices: [
+          { name: 'Ollama (Local, Free)', value: 'ollama' },
+          { name: 'OpenAI GPT-4', value: 'openai' },
+          { name: 'Anthropic Claude', value: 'anthropic' }
+        ]
+      }
+    ]);
+
+    primaryProvider = aiProvider;
+    const providerConfig = await configureAIProvider(aiProvider);
+    if (providerConfig) {
+      providers[aiProvider] = providerConfig;
+    }
+  } else {
+    // Multiple provider configuration
+    
+    const { selectedProviders } = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'selectedProviders',
+        message: 'Select AI providers to configure:',
+        choices: [
+          { name: 'Ollama (Local, Free)', value: 'ollama' },
+          { name: 'OpenAI GPT-4', value: 'openai' },
+          { name: 'Anthropic Claude', value: 'anthropic' }
+        ],
+        validate: input => input.length > 0 || 'Select at least one provider'
+      }
+    ]);
+
+    // Configure each selected provider
+    for (const provider of selectedProviders) {
+      console.log(chalk.cyan(`\n📝 Configuring ${provider.charAt(0).toUpperCase() + provider.slice(1)}:`));
+      const providerConfig = await configureAIProvider(provider);
+      if (providerConfig) {
+        providers[provider] = providerConfig;
+      }
+    }
+
+    // Select primary provider
+    if (selectedProviders.length > 1) {
+      const { primary } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'primary',
+          message: 'Select primary/default AI provider:',
+          choices: selectedProviders.map(p => ({
+            name: p.charAt(0).toUpperCase() + p.slice(1),
+            value: p
+          }))
+        }
+      ]);
+      primaryProvider = primary;
+    } else {
+      primaryProvider = selectedProviders[0];
+    }
+  }
+
+  return { 
+    provider: primaryProvider, 
+    providers: providers,
+    configured: Object.keys(providers)
+  };
+}
+
+async function configureAIProvider(provider) {
+  if (provider === 'ollama') {
     const ollama = new OllamaAI();
     const isRunning = await ollama.checkOllamaInstalled();
     
@@ -320,8 +395,9 @@ async function configureAI() {
           ]);
 
           await ollama.pullModel(modelName);
-          config.model = modelName;
+          return { model: modelName };
         }
+        return null;
       } else {
         console.log(chalk.green(`✓ Found ${models.length} model(s)`));
         
@@ -337,7 +413,7 @@ async function configureAI() {
           }
         ]);
         
-        config.model = selectedModel;
+        return { model: selectedModel };
       }
     } else {
       console.log(chalk.yellow('\n⚠️  Ollama is not running.'));
@@ -345,8 +421,9 @@ async function configureAI() {
       console.log('  1. Install from: https://ollama.ai');
       console.log('  2. Run: ollama serve');
       console.log('  3. Pull a model: ollama pull llama3.2:3b\n');
+      return null;
     }
-  } else if (aiProvider === 'openai') {
+  } else if (provider === 'openai') {
     const { apiKey } = await inquirer.prompt([
       {
         type: 'password',
@@ -356,8 +433,8 @@ async function configureAI() {
         validate: input => input.length > 0 || 'API key is required'
       }
     ]);
-    config.apiKey = apiKey;
-  } else if (aiProvider === 'anthropic') {
+    return { apiKey: apiKey };
+  } else if (provider === 'anthropic') {
     const { apiKey } = await inquirer.prompt([
       {
         type: 'password',
@@ -367,10 +444,9 @@ async function configureAI() {
         validate: input => input.length > 0 || 'API key is required'
       }
     ]);
-    config.apiKey = apiKey;
+    return { apiKey: apiKey };
   }
-
-  return config;
+  return null;
 }
 
 async function saveConfiguration(config) {
@@ -391,27 +467,36 @@ async function saveConfiguration(config) {
 
   fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
 
-  // Update .env file
-  const envPath = path.join(process.cwd(), '.env');
-  let envContent = '';
+  // Use new .env management system
+  const gcloudAuth = new GCloudAuth();
+  const envUpdates = {};
 
-  if (fs.existsSync(envPath)) {
-    envContent = fs.readFileSync(envPath, 'utf8');
-  }
+  // Set primary AI provider
+  envUpdates.AI_PROVIDER = config.credentials.ai.provider || 'none';
 
-  // Add AI configuration to .env
-  if (config.credentials.ai.provider === 'ollama') {
-    envContent += '\n# AI Configuration\nAI_PROVIDER=ollama\n';
-    if (config.credentials.ai.model) {
-      envContent += `OLLAMA_MODEL=${config.credentials.ai.model}\n`;
+  // Add all configured AI providers
+  if (config.credentials.ai.providers) {
+    for (const [provider, providerConfig] of Object.entries(config.credentials.ai.providers)) {
+      if (provider === 'ollama' && providerConfig.model) {
+        envUpdates.OLLAMA_MODEL = providerConfig.model;
+      } else if (provider === 'openai' && providerConfig.apiKey) {
+        envUpdates.OPENAI_API_KEY = providerConfig.apiKey;
+      } else if (provider === 'anthropic' && providerConfig.apiKey) {
+        envUpdates.ANTHROPIC_API_KEY = providerConfig.apiKey;
+      }
     }
-  } else if (config.credentials.ai.provider === 'openai') {
-    envContent += `\n# AI Configuration\nAI_PROVIDER=openai\nOPENAI_API_KEY=${config.credentials.ai.apiKey}\n`;
-  } else if (config.credentials.ai.provider === 'anthropic') {
-    envContent += `\n# AI Configuration\nAI_PROVIDER=anthropic\nANTHROPIC_API_KEY=${config.credentials.ai.apiKey}\n`;
+  } else {
+    // Legacy single provider configuration
+    if (config.credentials.ai.provider === 'ollama' && config.credentials.ai.model) {
+      envUpdates.OLLAMA_MODEL = config.credentials.ai.model;
+    } else if (config.credentials.ai.provider === 'openai' && config.credentials.ai.apiKey) {
+      envUpdates.OPENAI_API_KEY = config.credentials.ai.apiKey;
+    } else if (config.credentials.ai.provider === 'anthropic' && config.credentials.ai.apiKey) {
+      envUpdates.ANTHROPIC_API_KEY = config.credentials.ai.apiKey;
+    }
   }
 
-  fs.writeFileSync(envPath, envContent.trim() + '\n');
+  await gcloudAuth.updateEnvFile(envUpdates);
 }
 
 function formatBytes(bytes) {

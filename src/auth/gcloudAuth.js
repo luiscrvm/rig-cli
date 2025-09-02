@@ -845,33 +845,105 @@ export class GCloudAuth {
   }
 
   async saveCredentials(config) {
-    const envPath = path.join(process.cwd(), '.env');
-    let envContent = '';
-
-    if (fs.existsSync(envPath)) {
-      envContent = fs.readFileSync(envPath, 'utf8');
-      
-      // Remove old GCP configuration
-      envContent = envContent.split('\n')
-        .filter(line => !line.startsWith('GCP_PROJECT_ID') && 
-                       !line.startsWith('GOOGLE_APPLICATION_CREDENTIALS') &&
-                       !line.startsWith('GCP_REGION'))
-        .join('\n');
-    }
-
-    // Add new configuration
-    const gcpConfig = `
-# Rig CLI Configuration
-# GCP Configuration (using gcloud SDK)
-GCP_PROJECT_ID=${config.projectId}
-GCP_REGION=${config.region}
-GCP_ACCOUNT=${config.account}
-# Authentication handled by gcloud SDK
-`;
-
-    envContent = gcpConfig + envContent;
-    fs.writeFileSync(envPath, envContent.trim() + '\n');
+    await this.updateEnvFile({
+      GCP_PROJECT_ID: config.projectId,
+      GCP_REGION: config.region,
+      GCP_ACCOUNT: config.account
+    });
     
     console.log(chalk.green('\n✓ Configuration saved to .env file'));
+  }
+
+  async updateEnvFile(updates) {
+    const envPath = path.join(process.cwd(), '.env');
+    const envConfig = await this.parseEnvFile(envPath);
+
+    // Update or add new values
+    Object.assign(envConfig, updates);
+
+    // Write back to file with proper formatting
+    await this.writeEnvFile(envPath, envConfig);
+  }
+
+  async parseEnvFile(envPath) {
+    const config = {};
+    
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const lines = content.split('\n');
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        // Skip comments and empty lines
+        if (!trimmedLine || trimmedLine.startsWith('#')) {
+          continue;
+        }
+        
+        const equalIndex = trimmedLine.indexOf('=');
+        if (equalIndex > 0) {
+          const key = trimmedLine.substring(0, equalIndex).trim();
+          const value = trimmedLine.substring(equalIndex + 1).trim();
+          config[key] = value;
+        }
+      }
+    }
+    
+    return config;
+  }
+
+  async writeEnvFile(envPath, config) {
+    const sections = {
+      rig: [],
+      gcp: [],
+      ai: [],
+      other: []
+    };
+
+    // Categorize configuration keys
+    for (const [key, value] of Object.entries(config)) {
+      if (key.startsWith('GCP_') || key === 'GOOGLE_APPLICATION_CREDENTIALS') {
+        sections.gcp.push(`${key}=${value}`);
+      } else if (key.includes('AI_') || key.includes('OPENAI_') || key.includes('ANTHROPIC_') || key.includes('OLLAMA_')) {
+        sections.ai.push(`${key}=${value}`);
+      } else if (key.startsWith('RIG_')) {
+        sections.rig.push(`${key}=${value}`);
+      } else {
+        sections.other.push(`${key}=${value}`);
+      }
+    }
+
+    let content = '';
+
+    // Rig CLI Configuration section
+    if (sections.rig.length > 0 || sections.gcp.length > 0 || sections.ai.length > 0) {
+      content += '# Rig CLI Configuration\n';
+    }
+
+    // GCP Configuration section
+    if (sections.gcp.length > 0) {
+      content += '# GCP Configuration (using gcloud SDK)\n';
+      content += sections.gcp.join('\n') + '\n';
+      content += '# Authentication handled by gcloud SDK\n\n';
+    }
+
+    // AI Configuration section  
+    if (sections.ai.length > 0) {
+      content += '# AI Provider Configuration\n';
+      content += sections.ai.join('\n') + '\n\n';
+    }
+
+    // Rig CLI specific settings
+    if (sections.rig.length > 0) {
+      content += '# Rig CLI Settings\n';
+      content += sections.rig.join('\n') + '\n\n';
+    }
+
+    // Other configuration
+    if (sections.other.length > 0) {
+      content += '# Other Configuration\n';
+      content += sections.other.join('\n') + '\n';
+    }
+
+    fs.writeFileSync(envPath, content.trim() + '\n');
   }
 }
