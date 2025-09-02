@@ -5,11 +5,11 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 
 export class TerraformGenerator {
-  constructor(cloudManager, aiAssistant, logger) {
+  constructor(cloudManager, aiAssistant, logger, outputDir = null) {
     this.cloudManager = cloudManager;
     this.aiAssistant = aiAssistant;
     this.logger = logger;
-    this.outputDir = path.join(process.cwd(), 'terraform');
+    this.outputDir = outputDir || path.join(process.cwd(), 'terraform');
   }
 
   async generateComplete(analysis, options) {

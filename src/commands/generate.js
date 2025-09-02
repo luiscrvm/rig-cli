@@ -106,7 +106,8 @@ export async function generate(type, options) {
 }
 
 async function generateTerraform(options, analysis, cloudManager, aiAssistant, logger) {
-  const generator = new TerraformGenerator(cloudManager, aiAssistant, logger);
+  const outputDir = options.output ? path.resolve(options.output) : null;
+  const generator = new TerraformGenerator(cloudManager, aiAssistant, logger, outputDir);
   
   console.log(chalk.blue.bold('\n🏗️  TERRAFORM GENERATION'));
   console.log(chalk.blue('='.repeat(40)));
@@ -119,7 +120,8 @@ async function generateTerraform(options, analysis, cloudManager, aiAssistant, l
 }
 
 async function generateKubernetes(options, analysis, cloudManager, aiAssistant, logger) {
-  const generator = new KubernetesGenerator(cloudManager, aiAssistant, logger);
+  const outputDir = options.output ? path.resolve(options.output) : null;
+  const generator = new KubernetesGenerator(cloudManager, aiAssistant, logger, outputDir);
   
   console.log(chalk.cyan.bold('\n⚡ KUBERNETES GENERATION'));
   console.log(chalk.cyan('='.repeat(40)));
@@ -134,7 +136,8 @@ async function generateKubernetes(options, analysis, cloudManager, aiAssistant, 
 }
 
 async function generateDocker(options, analysis, aiAssistant, logger) {
-  const generator = new DockerGenerator(aiAssistant, logger);
+  const outputDir = options.output ? path.resolve(options.output) : null;
+  const generator = new DockerGenerator(aiAssistant, logger, outputDir);
   
   console.log(chalk.magenta.bold('\n🐳 DOCKER GENERATION'));
   console.log(chalk.magenta('='.repeat(40)));
@@ -143,7 +146,8 @@ async function generateDocker(options, analysis, aiAssistant, logger) {
 }
 
 async function generateCICD(options, analysis, aiAssistant, logger) {
-  const generator = new CICDGenerator(aiAssistant, logger);
+  const outputDir = options.output ? path.resolve(options.output) : null;
+  const generator = new CICDGenerator(aiAssistant, logger, outputDir);
   
   console.log(chalk.yellow.bold('\n🔄 CI/CD GENERATION'));
   console.log(chalk.yellow('='.repeat(40)));
@@ -158,7 +162,8 @@ async function generateCICD(options, analysis, aiAssistant, logger) {
 }
 
 async function generateMonitoring(options, analysis, cloudManager, aiAssistant, logger) {
-  const generator = new MonitoringGenerator(cloudManager, aiAssistant, logger);
+  const outputDir = options.output ? path.resolve(options.output) : null;
+  const generator = new MonitoringGenerator(cloudManager, aiAssistant, logger, outputDir);
   
   console.log(chalk.red.bold('\n📊 MONITORING GENERATION'));
   console.log(chalk.red('='.repeat(40)));
@@ -174,6 +179,11 @@ async function generateMonitoring(options, analysis, cloudManager, aiAssistant, 
 
 async function generateSecurityConfigs(options, analysis, cloudManager, aiAssistant, logger) {
   const generator = new SecurityConfigGenerator(cloudManager, aiAssistant, logger);
+  
+  // Add the resolved output directory to options
+  if (options.output) {
+    options.outputDir = path.resolve(options.output);
+  }
   
   console.log(chalk.red.bold('\n🛡️  SECURITY CONFIG GENERATION'));
   console.log(chalk.red('='.repeat(40)));

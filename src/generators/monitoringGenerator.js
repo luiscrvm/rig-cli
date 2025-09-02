@@ -4,11 +4,11 @@ import chalk from 'chalk';
 import ora from 'ora';
 
 export class MonitoringGenerator {
-  constructor(cloudManager, aiAssistant, logger) {
+  constructor(cloudManager, aiAssistant, logger, outputDir = null) {
     this.cloudManager = cloudManager;
     this.aiAssistant = aiAssistant;
     this.logger = logger;
-    this.outputDir = path.join(process.cwd(), 'monitoring');
+    this.outputDir = outputDir || path.join(process.cwd(), 'monitoring');
   }
 
   async generateComplete(analysis, options) {

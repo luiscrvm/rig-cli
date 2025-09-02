@@ -5,10 +5,10 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 
 export class CICDGenerator {
-  constructor(aiAssistant, logger) {
+  constructor(aiAssistant, logger, outputDir = null) {
     this.aiAssistant = aiAssistant;
     this.logger = logger;
-    this.projectRoot = process.cwd();
+    this.projectRoot = outputDir || process.cwd();
   }
 
   async generateInteractive(analysis, options) {
