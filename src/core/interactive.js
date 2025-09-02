@@ -70,31 +70,112 @@ export class InteractiveMode {
   }
 
   async setupContext() {
-    const answers = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'provider',
-        message: 'Select cloud provider:',
-        choices: ['AWS', 'GCP', 'Azure'],
-        default: this.context.provider
-      },
-      {
-        type: 'input',
-        name: 'region',
-        message: 'Enter region:',
-        default: this.context.region || 'us-east-1'
-      },
-      {
-        type: 'list',
-        name: 'environment',
-        message: 'Select environment:',
-        choices: ['dev', 'staging', 'production'],
-        default: this.context.environment
-      }
-    ]);
+    let configuring = true;
+    
+    while (configuring) {
+      // Step 1: Provider selection
+      const { provider, providerAction } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'provider',
+          message: 'Select cloud provider:',
+          choices: [
+            { name: 'AWS', value: 'AWS' },
+            { name: 'GCP', value: 'GCP' },
+            { name: 'Azure', value: 'Azure' },
+            { name: '🔙 Back to Main Menu', value: 'back' }
+          ],
+          default: this.context.provider
+        }
+      ]);
 
-    this.context = { ...this.context, ...answers };
-    console.log(chalk.green(`\n✓ Context set: ${this.context.provider} - ${this.context.region} - ${this.context.environment}\n`));
+      if (provider === 'back') {
+        return; // Exit configuration
+      }
+
+      // Step 2: Region selection
+      const defaultRegion = this.getDefaultRegion(provider);
+      const { region, regionAction } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'region',
+          message: `Enter region for ${provider}:`,
+          default: this.context.region || defaultRegion,
+          validate: input => input.length > 0 || 'Region is required'
+        },
+        {
+          type: 'list',
+          name: 'regionAction',
+          message: 'Next step:',
+          choices: [
+            { name: '➡️ Continue to Environment', value: 'continue' },
+            { name: '🔙 Back to Provider Selection', value: 'back' }
+          ]
+        }
+      ]);
+
+      if (regionAction === 'back') {
+        continue; // Go back to provider selection
+      }
+
+      // Step 3: Environment selection
+      const { environment, environmentAction } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'environment',
+          message: 'Select environment:',
+          choices: [
+            { name: 'Development', value: 'dev' },
+            { name: 'Staging', value: 'staging' },
+            { name: 'Production', value: 'production' }
+          ],
+          default: this.context.environment
+        },
+        {
+          type: 'list',
+          name: 'environmentAction',
+          message: 'Final step:',
+          choices: [
+            { name: '✅ Save Configuration', value: 'save' },
+            { name: '🔙 Back to Region Selection', value: 'back' },
+            { name: '🔙 Back to Provider Selection', value: 'provider' }
+          ]
+        }
+      ]);
+
+      if (environmentAction === 'back') {
+        // Go back to region selection with current provider
+        const { newRegion } = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'newRegion',
+            message: `Enter region for ${provider}:`,
+            default: region,
+            validate: input => input.length > 0 || 'Region is required'
+          }
+        ]);
+        
+        // Update region and continue to environment
+        this.context = { ...this.context, provider, region: newRegion };
+        continue;
+      } else if (environmentAction === 'provider') {
+        continue; // Go back to provider selection
+      } else if (environmentAction === 'save') {
+        // Save configuration and exit
+        this.context = { ...this.context, provider, region, environment };
+        console.log(chalk.green(`\n✓ Context set: ${this.context.provider} - ${this.context.region} - ${this.context.environment}\n`));
+        configuring = false;
+      }
+    }
+  }
+
+  getDefaultRegion(provider) {
+    const defaults = {
+      'AWS': 'us-east-1',
+      'GCP': 'us-central1', 
+      'Azure': 'eastus'
+    };
+    return defaults[provider] || 'us-east-1';
   }
 
   async viewResources() {
