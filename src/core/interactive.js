@@ -74,7 +74,7 @@ export class InteractiveMode {
     
     while (configuring) {
       // Step 1: Provider selection
-      const { provider, providerAction } = await inquirer.prompt([
+      const { provider } = await inquirer.prompt([
         {
           type: 'list',
           name: 'provider',
@@ -95,31 +95,37 @@ export class InteractiveMode {
 
       // Step 2: Region selection
       const defaultRegion = this.getDefaultRegion(provider);
-      const { region, regionAction } = await inquirer.prompt([
+      const { region } = await inquirer.prompt([
         {
           type: 'input',
           name: 'region',
           message: `Enter region for ${provider}:`,
           default: this.context.region || defaultRegion,
           validate: input => input.length > 0 || 'Region is required'
-        },
+        }
+      ]);
+
+      const { regionAction } = await inquirer.prompt([
         {
           type: 'list',
           name: 'regionAction',
-          message: 'Next step:',
+          message: 'What would you like to do next?',
           choices: [
-            { name: '➡️ Continue to Environment', value: 'continue' },
-            { name: '🔙 Back to Provider Selection', value: 'back' }
+            { name: '➡️ Continue to Environment Selection', value: 'continue' },
+            { name: '🔙 Back to Provider Selection', value: 'back' },
+            { name: '🏠 Back to Main Menu', value: 'main' }
           ]
         }
       ]);
 
       if (regionAction === 'back') {
         continue; // Go back to provider selection
+      } else if (regionAction === 'main') {
+        return; // Exit to main menu
       }
 
       // Step 3: Environment selection
-      const { environment, environmentAction } = await inquirer.prompt([
+      const { environment } = await inquirer.prompt([
         {
           type: 'list',
           name: 'environment',
@@ -130,36 +136,67 @@ export class InteractiveMode {
             { name: 'Production', value: 'production' }
           ],
           default: this.context.environment
-        },
+        }
+      ]);
+
+      const { environmentAction } = await inquirer.prompt([
         {
           type: 'list',
           name: 'environmentAction',
-          message: 'Final step:',
+          message: 'What would you like to do next?',
           choices: [
             { name: '✅ Save Configuration', value: 'save' },
-            { name: '🔙 Back to Region Selection', value: 'back' },
-            { name: '🔙 Back to Provider Selection', value: 'provider' }
+            { name: '🔙 Back to Region Selection', value: 'region' },
+            { name: '🔙 Back to Provider Selection', value: 'provider' },
+            { name: '🏠 Back to Main Menu', value: 'main' }
           ]
         }
       ]);
 
-      if (environmentAction === 'back') {
-        // Go back to region selection with current provider
-        const { newRegion } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'newRegion',
-            message: `Enter region for ${provider}:`,
-            default: region,
-            validate: input => input.length > 0 || 'Region is required'
+      if (environmentAction === 'region') {
+        // Go back to region selection with current provider - create a nested loop for region
+        let regionConfiguring = true;
+        while (regionConfiguring) {
+          const { newRegion } = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'newRegion',
+              message: `Enter region for ${provider}:`,
+              default: region,
+              validate: input => input.length > 0 || 'Region is required'
+            }
+          ]);
+
+          const { newRegionAction } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'newRegionAction',
+              message: 'What would you like to do next?',
+              choices: [
+                { name: '➡️ Continue to Environment Selection', value: 'continue' },
+                { name: '🔙 Back to Provider Selection', value: 'provider' },
+                { name: '🏠 Back to Main Menu', value: 'main' }
+              ]
+            }
+          ]);
+
+          if (newRegionAction === 'continue') {
+            // Update region and continue to environment selection
+            this.context = { ...this.context, provider, region: newRegion };
+            regionConfiguring = false;
+            // Will continue to environment selection in main loop
+          } else if (newRegionAction === 'provider') {
+            regionConfiguring = false;
+            continue; // Go back to provider selection in main loop
+          } else if (newRegionAction === 'main') {
+            return; // Exit to main menu
           }
-        ]);
-        
-        // Update region and continue to environment
-        this.context = { ...this.context, provider, region: newRegion };
-        continue;
+        }
+        // After region loop, continue to environment selection by not setting any flags
       } else if (environmentAction === 'provider') {
         continue; // Go back to provider selection
+      } else if (environmentAction === 'main') {
+        return; // Exit to main menu
       } else if (environmentAction === 'save') {
         // Save configuration and exit
         this.context = { ...this.context, provider, region, environment };
