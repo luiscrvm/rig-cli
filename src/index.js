@@ -157,4 +157,16 @@ program
     await create(prompt, options);
   });
 
+program
+  .command('api')
+  .description('Manage GCP API enablement')
+  .option('--enable <apis>', 'Enable specific APIs (comma-separated)')
+  .option('--list', 'List currently enabled APIs')
+  .option('--check', 'Check required API status')
+  .option('--force', 'Force re-enable APIs even if already enabled')
+  .action(async (options) => {
+    const { apiCommand } = await import('./commands/api.js');
+    await apiCommand(options);
+  });
+
 program.parse(process.argv);

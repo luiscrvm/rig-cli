@@ -434,29 +434,129 @@ export class GCloudAuth {
     return region;
   }
 
-  async enableAPIs(projectId) {
-    console.log(chalk.cyan('\n🔧 Enabling required GCP APIs...\n'));
-    
-    const apis = [
+  async enableAPIs(projectId, forceReEnable = false, specificApis = null) {
+    const requiredApis = specificApis || [
       'compute.googleapis.com',
-      'storage-api.googleapis.com',
+      'storage-api.googleapis.com', 
       'cloudresourcemanager.googleapis.com',
       'logging.googleapis.com',
       'monitoring.googleapis.com'
     ];
 
-    const spinner = ora('Enabling APIs...').start();
+    console.log(chalk.cyan('\n🔧 Checking GCP API status...\n'));
     
-    for (const api of apis) {
-      try {
-        spinner.text = `Enabling ${api}...`;
-        await execAsync(`gcloud services enable ${api} --project=${projectId}`);
-      } catch (error) {
-        this.logger.warn(`Failed to enable ${api}: ${error.message}`);
+    const spinner = ora('Checking enabled APIs...').start();
+    
+    try {
+      // Get list of enabled APIs
+      const { stdout } = await execAsync(`gcloud services list --enabled --project=${projectId} --format=json`);
+      const enabledServices = JSON.parse(stdout);
+      const enabledApiNames = enabledServices.map(service => service.config.name);
+      
+      spinner.text = 'Analyzing API requirements...';
+      
+      // Find APIs that need to be enabled
+      const apisToEnable = requiredApis.filter(api => {
+        const isEnabled = enabledApiNames.includes(api);
+        if (isEnabled && !forceReEnable) {
+          this.logger.info(`API ${api} already enabled`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (apisToEnable.length === 0) {
+        spinner.succeed('All required APIs are already enabled');
+        console.log(chalk.green('✅ No API changes needed\n'));
+        return;
       }
+      
+      spinner.text = `Enabling ${apisToEnable.length} APIs...`;
+      console.log(chalk.yellow(`\nEnabling ${apisToEnable.length} missing APIs:\n`));
+      
+      let enabledCount = 0;
+      let failedCount = 0;
+      
+      for (const api of apisToEnable) {
+        try {
+          spinner.text = `Enabling ${api}...`;
+          await execAsync(`gcloud services enable ${api} --project=${projectId}`);
+          console.log(chalk.green(`  ✅ ${api}`));
+          enabledCount++;
+        } catch (error) {
+          console.log(chalk.red(`  ❌ ${api} - ${error.message}`));
+          this.logger.warn(`Failed to enable ${api}: ${error.message}`);
+          failedCount++;
+        }
+      }
+      
+      if (enabledCount > 0) {
+        spinner.succeed(`Successfully enabled ${enabledCount} APIs`);
+      } else {
+        spinner.warn('No APIs were enabled successfully');
+      }
+      
+      if (failedCount > 0) {
+        console.log(chalk.yellow(`\n⚠️  ${failedCount} APIs failed to enable. This may affect some functionality.`));
+      }
+      
+      // Cache the API status to avoid re-checking soon
+      await this.cacheApiStatus(projectId, enabledApiNames.concat(apisToEnable));
+      
+    } catch (error) {
+      spinner.fail('Failed to check API status');
+      console.log(chalk.red(`\n❌ Error checking APIs: ${error.message}`));
+      console.log(chalk.yellow('💡 You may need to enable APIs manually in GCP Console\n'));
+      throw error;
     }
-    
-    spinner.succeed('APIs enabled');
+  }
+
+  async cacheApiStatus(projectId, enabledApis) {
+    try {
+      const cacheData = {
+        projectId,
+        enabledApis,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      };
+      
+      const cacheDir = path.join(process.env.HOME || process.env.USERPROFILE || '.', '.rig-cli');
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
+      
+      const cacheFile = path.join(cacheDir, 'api-cache.json');
+      fs.writeFileSync(cacheFile, JSON.stringify(cacheData, null, 2));
+      
+    } catch (error) {
+      // Cache failure is not critical, just log it
+      this.logger.warn(`Failed to cache API status: ${error.message}`);
+    }
+  }
+
+  async getCachedApiStatus(projectId) {
+    try {
+      const cacheFile = path.join(process.env.HOME || process.env.USERPROFILE || '.', '.rig-cli', 'api-cache.json');
+      
+      if (!fs.existsSync(cacheFile)) {
+        return null;
+      }
+      
+      const cacheData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      
+      // Check if cache is for the same project and not expired
+      if (cacheData.projectId === projectId && Date.now() < cacheData.expiresAt) {
+        return cacheData.enabledApis;
+      }
+      
+      // Cache is stale, remove it
+      fs.unlinkSync(cacheFile);
+      return null;
+      
+    } catch (error) {
+      // Cache read failure is not critical
+      return null;
+    }
   }
 
   async getAuthInfo() {
