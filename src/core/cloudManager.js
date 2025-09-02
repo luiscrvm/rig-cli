@@ -144,4 +144,39 @@ export class CloudManager {
       throw error;
     }
   }
+
+  async validateResourceConsistency(provider = 'gcp', region = null) {
+    try {
+      const resources = await this.listAllResources(provider, region);
+      const summary = {
+        totalResources: 0,
+        totalCost: 0,
+        byType: {},
+        hasErrors: false,
+        errors: []
+      };
+
+      for (const resourceGroup of resources) {
+        summary.byType[resourceGroup.type] = {
+          count: resourceGroup.items.length,
+          hasError: !!resourceGroup.error
+        };
+        
+        summary.totalResources += resourceGroup.items.length;
+        
+        if (resourceGroup.error) {
+          summary.hasErrors = true;
+          summary.errors.push({
+            type: resourceGroup.type,
+            error: resourceGroup.error
+          });
+        }
+      }
+      
+      return summary;
+    } catch (error) {
+      this.logger.error(`Resource validation failed: ${error.message}`);
+      throw error;
+    }
+  }
 }
