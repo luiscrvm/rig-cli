@@ -1,0 +1,17 @@
+# DEV Environment Configuration
+# Copy this file to terraform.tfvars and update values
+
+project_id = "xometrydevops-training"
+region     = "us-central1"
+
+
+# Compute Configuration
+instance_type  = "e2-micro"
+instance_count = 1
+
+
+# Database Configuration
+database_type    = "postgres"
+database_version = "13"
+
+
