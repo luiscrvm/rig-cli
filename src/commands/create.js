@@ -130,6 +130,12 @@ async function interpretUserIntent(prompt, analysis, aiAssistant) {
   const aiPrompt = `
 You are an infrastructure architect assistant. Analyze the user's request and project context to determine what infrastructure should be created.
 
+IMPORTANT: Pay close attention to exclusions and limitations in the user request:
+- If user says "no cicd" or "no ci/cd" - do NOT include CI/CD
+- If user says "just compute" or "only compute" - ONLY include compute, exclude everything else
+- If user says "cheapest" - use minimal configurations and dev environment only
+- If user specifies components explicitly, do NOT add others
+
 User Request: "${prompt}"
 
 Project Context:
@@ -153,10 +159,13 @@ Please provide a JSON response with the following structure:
     "monitoring": "Monitoring and logging needs"
   },
   "infrastructure_type": "terraform|kubernetes|docker|mixed",
+  "noCicd": true/false,
+  "cheapestOption": true/false,
+  "simpleStructure": true/false,
   "recommendations": ["Additional suggestions"]
 }
 
-Focus on practical, production-ready configurations appropriate for the project type.
+Respect user exclusions and keep configurations minimal when requested.
 `;
 
   try {
@@ -293,10 +302,15 @@ async function generateInfrastructure(interpretation, analysis, options, service
     fs.mkdirSync(baseOutputDir, { recursive: true });
   }
 
-  // Generate based on infrastructure type
+  // Generate based on infrastructure type and complexity
   switch (interpretation.infrastructure_type) {
   case 'terraform':
-    await generateTerraformEnvironments(interpretation, analysis, baseOutputDir, services);
+    // Use simple structure for basic cases
+    if (shouldUseSimpleStructure(interpretation)) {
+      await generateSimpleTerraform(interpretation, analysis, baseOutputDir, services);
+    } else {
+      await generateTerraformEnvironments(interpretation, analysis, baseOutputDir, services);
+    }
     break;
   case 'kubernetes':
     await generateKubernetesEnvironments(interpretation, analysis, baseOutputDir, services);
@@ -323,6 +337,166 @@ async function generateInfrastructure(interpretation, analysis, options, service
 
   // Create README with instructions
   await createInfrastructureReadme(interpretation, baseOutputDir, analysis);
+}
+
+function shouldUseSimpleStructure(interpretation) {
+  // Use simple structure for basic cases:
+  // 1. Only compute component requested
+  // 2. Single dev environment
+  // 3. Cheapest option (indicating simple deployment)
+  // 4. No complex components like database, networking modules
+  
+  const isComputeOnly = interpretation.components.length === 1 && interpretation.components.includes('compute');
+  const isDevOnly = interpretation.environments.length === 1 && interpretation.environments.includes('dev');
+  const isCheapest = interpretation.cheapestOption || interpretation.intent.toLowerCase().includes('cheapest');
+  const hasOnlyBasicComponents = interpretation.components.every(comp => 
+    ['compute', 'monitoring'].includes(comp)
+  );
+  
+  return (isComputeOnly || (hasOnlyBasicComponents && interpretation.components.length <= 2)) && 
+         isDevOnly && 
+         isCheapest;
+}
+
+async function generateSimpleTerraform(interpretation, analysis, baseOutputDir, services) {
+  const { cloudManager, logger } = services;
+  
+  console.log(chalk.blue('\n📦 Generating simplified Terraform configuration...'));
+  
+  // Create terraform directory (flat structure, no modules)
+  const terraformDir = path.join(baseOutputDir, 'terraform');
+  fs.mkdirSync(terraformDir, { recursive: true });
+  
+  // Generate main.tf with all resources inline
+  const mainTf = generateSimpleMainTf(interpretation, analysis);
+  fs.writeFileSync(path.join(terraformDir, 'main.tf'), mainTf);
+  
+  // Generate variables.tf
+  const variablesTf = generateSimpleVariablesTf(analysis);
+  fs.writeFileSync(path.join(terraformDir, 'variables.tf'), variablesTf);
+  
+  // Generate outputs.tf
+  const outputsTf = generateSimpleOutputsTf();
+  fs.writeFileSync(path.join(terraformDir, 'outputs.tf'), outputsTf);
+  
+  // Generate terraform.tfvars
+  const tfvars = generateSimpleTfvars(analysis);
+  fs.writeFileSync(path.join(terraformDir, 'terraform.tfvars'), tfvars);
+  
+  console.log(chalk.green(`✅ Simple Terraform configuration generated in: ${terraformDir}`));
+  console.log(chalk.dim('   Files created: main.tf, variables.tf, outputs.tf, terraform.tfvars'));
+}
+
+function generateSimpleMainTf(interpretation, analysis) {
+  return `terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Compute Engine Instance (cheapest configuration)
+resource "google_compute_instance" "dev_instance" {
+  name         = "\${var.project_id}-dev-instance"
+  machine_type = "e2-micro"  # Cheapest option
+  zone         = "\${var.region}-a"
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+      size  = 10  # Minimal disk size
+      type  = "pd-standard"  # Cheapest disk type
+    }
+  }
+
+  network_interface {
+    network = "default"  # Use default network to avoid additional costs
+    access_config {
+      # Ephemeral public IP
+    }
+  }
+
+  metadata = {
+    environment = "dev"
+    managed-by  = "rig-cli"
+  }
+
+  tags = ["dev", "compute"]
+
+  # Allow HTTP traffic
+  allow_stopping_for_update = true
+}
+
+# Firewall rule for HTTP access (if needed)
+resource "google_compute_firewall" "dev_http" {
+  name    = "\${var.project_id}-dev-http"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "8080"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["dev", "compute"]
+}`;
+}
+
+function generateSimpleVariablesTf(analysis) {
+  const projectId = analysis.cloudConfig?.project_id || process.env.GCP_PROJECT_ID || 'xometrydevops-training';
+  const region = analysis.cloudConfig?.region || process.env.GCP_REGION || 'us-central1';
+  
+  return `variable "project_id" {
+  description = "GCP Project ID"
+  type        = string
+  default     = "${projectId}"
+}
+
+variable "region" {
+  description = "GCP Region"
+  type        = string
+  default     = "${region}"
+}`;
+}
+
+function generateSimpleOutputsTf() {
+  return `output "instance_name" {
+  description = "Name of the compute instance"
+  value       = google_compute_instance.dev_instance.name
+}
+
+output "instance_external_ip" {
+  description = "External IP address of the compute instance"
+  value       = google_compute_instance.dev_instance.network_interface[0].access_config[0].nat_ip
+}
+
+output "instance_internal_ip" {
+  description = "Internal IP address of the compute instance"
+  value       = google_compute_instance.dev_instance.network_interface[0].network_ip
+}
+
+output "ssh_command" {
+  description = "Command to SSH into the instance"
+  value       = "gcloud compute ssh \${google_compute_instance.dev_instance.name} --zone=\${google_compute_instance.dev_instance.zone}"
+}`;
+}
+
+function generateSimpleTfvars(analysis) {
+  const projectId = analysis.cloudConfig?.project_id || process.env.GCP_PROJECT_ID || 'xometrydevops-training';
+  const region = analysis.cloudConfig?.region || process.env.GCP_REGION || 'us-central1';
+  
+  return `# Terraform variables for dev environment
+project_id = "${projectId}"
+region     = "${region}"
+`;
 }
 
 async function generateTerraformEnvironments(interpretation, analysis, baseOutputDir, services) {

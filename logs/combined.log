@@ -24,3 +24,53 @@
 {"level":"info","message":"Security configuration generation completed","timestamp":"2025-09-02T01:21:51.213Z"}
 {"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T01:22:18.034Z"}
 {"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T01:27:24.615Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:20:17.612Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:32:06.006Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:37:17.738Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:37:59.607Z"}
+{"level":"error","message":"Infrastructure generation failed: ENOENT: no such file or directory, open '/Volumes/ExternalSSD/hw/devops-sre/devops-cli/sandbox/test-docker/Dockerfile'","timestamp":"2025-09-02T22:38:20.882Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:39:05.769Z"}
+{"level":"error","message":"Infrastructure generation failed: ENOENT: no such file or directory, open '/Volumes/ExternalSSD/hw/devops-sre/devops-cli/sandbox/test-docker/Dockerfile'","timestamp":"2025-09-02T22:39:27.191Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:40:26.496Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:41:17.185Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:50:25.611Z"}
+{"level":"info","message":"Using GCP project: aibrandedbooth in region: us-central1","timestamp":"2025-09-02T22:54:42.761Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T22:55:38.123Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T22:57:19.096Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T22:59:00.984Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T22:59:14.913Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:03:20.110Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:25:04.367Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:27:32.716Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:32:27.761Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:32:57.578Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:34:48.495Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:39:53.304Z"}
+{"level":"warn","message":"Failed to disable bigquery.googleapis.com: Command failed: gcloud services disable bigquery.googleapis.com --project=xometrydevops-training\nProvide the --force flag if you wish to force disable services.\nERROR: (gcloud.services.disable) FAILED_PRECONDITION: The service bigquery.googleapis.com is depended on by the following active service(s): bigquerystorage.googleapis.com,cloudapis.googleapis.com; Please specify disable_dependent_services=true if you want to proceed with disabling all services.\nHelp Token: AeNz4PhMH3p-TzEmscUFnkIA9APpVkqT_LoD6q35wmJFW0_Lt4UsOEkezkRP5S_hYT0RmLO63wg-ZqLppbV_k56hukcTkg-4lCFJJQ9hcd85XMT4\n- '@type': type.googleapis.com/google.rpc.PreconditionFailure\n  violations:\n  - subject: ?error_code=100001&service_name=bigquery.googleapis.com&services=bigquerystorage.googleapis.com&services=cloudapis.googleapis.com\n    type: googleapis.com\n- '@type': type.googleapis.com/google.rpc.ErrorInfo\n  domain: serviceusage.googleapis.com\n  metadata:\n    service_name: bigquery.googleapis.com\n    services: bigquerystorage.googleapis.com,cloudapis.googleapis.com\n  reason: COMMON_SU_SERVICE_HAS_DEPENDENT_SERVICES\n","timestamp":"2025-09-02T23:40:17.769Z"}
+{"level":"warn","message":"Failed to disable cloudaicompanion.googleapis.com: Command failed: gcloud services disable cloudaicompanion.googleapis.com --project=xometrydevops-training\nProvide the --force flag if you wish to force disable services.\nERROR: (gcloud.services.disable) FAILED_PRECONDITION: The service cloudaicompanion.googleapis.com is depended on by the following active service(s): geminicloudassist.googleapis.com; Please specify disable_dependent_services=true if you want to proceed with disabling all services.\nHelp Token: AeNz4PiOq9SOSxzEtQVIzSkEBLeC6fA-r_gtN3NDZ3ZiNjurPiXwnzApaKIorddZ8oXIIQv1I1dTiwAZQyR4JD1HpLyqsAXovnbGxSd-PUm-66JT\n- '@type': type.googleapis.com/google.rpc.PreconditionFailure\n  violations:\n  - subject: ?error_code=100001&service_name=cloudaicompanion.googleapis.com&services=geminicloudassist.googleapis.com\n    type: googleapis.com\n- '@type': type.googleapis.com/google.rpc.ErrorInfo\n  domain: serviceusage.googleapis.com\n  metadata:\n    service_name: cloudaicompanion.googleapis.com\n    services: geminicloudassist.googleapis.com\n  reason: COMMON_SU_SERVICE_HAS_DEPENDENT_SERVICES\n","timestamp":"2025-09-02T23:40:40.503Z"}
+{"level":"warn","message":"Failed to disable oslogin.googleapis.com: Command failed: gcloud services disable oslogin.googleapis.com --project=xometrydevops-training\nProvide the --force flag if you wish to force disable services.\nERROR: (gcloud.services.disable) FAILED_PRECONDITION: The service oslogin.googleapis.com is depended on by the following active service(s): compute.googleapis.com; Please specify disable_dependent_services=true if you want to proceed with disabling all services.\nHelp Token: AeNz4PiHeoxNvRGtr3b1fM7RrmH6narz5_r7Ir7cP3XYOKbTh2MBW2yp3Jkyf0PnLi3WHmCN_K5jxIAUsLVtWqjAUVbgNUNoWNgUsdKd0iMTVzf3\n- '@type': type.googleapis.com/google.rpc.PreconditionFailure\n  violations:\n  - subject: ?error_code=100001&service_name=oslogin.googleapis.com&services=compute.googleapis.com\n    type: googleapis.com\n- '@type': type.googleapis.com/google.rpc.ErrorInfo\n  domain: serviceusage.googleapis.com\n  metadata:\n    service_name: oslogin.googleapis.com\n    services: compute.googleapis.com\n  reason: COMMON_SU_SERVICE_HAS_DEPENDENT_SERVICES\n","timestamp":"2025-09-02T23:41:11.172Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:41:33.771Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-02T23:42:27.365Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:44:13.040Z"}
+{"level":"info","message":"API compute.googleapis.com already enabled","timestamp":"2025-09-02T23:44:28.485Z"}
+{"level":"info","message":"gcloud SDK found: Google Cloud SDK 535.0.0","timestamp":"2025-09-02T23:45:10.314Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-02T23:53:58.513Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-02T23:56:55.049Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:15:49.517Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:16:45.423Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:17:08.197Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:18:15.682Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:18:46.775Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:29:02.559Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:29:29.358Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:30:19.306Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:31:33.297Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:48:44.011Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:51:55.404Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:59:15.500Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T00:59:51.303Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T01:01:45.771Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T01:05:30.905Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T01:05:58.375Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T01:07:27.818Z"}
+{"level":"info","message":"Using GCP project: xometrydevops-training in region: us-central1","timestamp":"2025-09-03T01:08:17.951Z"}
