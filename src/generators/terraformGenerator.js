@@ -53,6 +53,9 @@ export class TerraformGenerator {
         console.log(chalk.yellow('\n💡 Don\'t forget to run terraform import commands for existing resources!'));
         console.log(chalk.gray('Check the generated README.md for import statements.'));
       }
+
+      // Interactive post-generation setup
+      await this.handlePostGenerationSetup(analysis, options);
       
     } catch (error) {
       spinner.fail('Terraform generation failed');
@@ -92,6 +95,9 @@ export class TerraformGenerator {
       
       spinner.succeed(`${moduleName} module generated successfully`);
       console.log(chalk.green(`✅ Module generated at: ${moduleDir}`));
+      
+      // Interactive setup for individual modules
+      await this.handleModuleSetup(moduleDir, moduleName);
       
     } catch (error) {
       spinner.fail(`${moduleName} module generation failed`);
@@ -1888,6 +1894,295 @@ output "subnet_names" {
   ensureDirectoryExists(dir) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  async handlePostGenerationSetup(analysis, options) {
+    console.log(chalk.cyan('\n🔧 POST-GENERATION SETUP'));
+    console.log(chalk.gray('═'.repeat(50)));
+    
+    const setupChoices = [];
+    
+    // Check if terraform.tfvars.example exists
+    const tfvarsExamplePath = path.join(this.outputDir, 'terraform.tfvars.example');
+    const tfvarsPath = path.join(this.outputDir, 'terraform.tfvars');
+    
+    if (fs.existsSync(tfvarsExamplePath)) {
+      setupChoices.push({
+        name: 'Copy terraform.tfvars.example to terraform.tfvars (required for terraform plan/apply)',
+        value: 'copy_tfvars'
+      });
+    }
+
+    // Check for module tfvars examples
+    const modulesDir = path.join(this.outputDir, 'modules');
+    const moduleSetupNeeded = [];
+    
+    if (fs.existsSync(modulesDir)) {
+      const modules = fs.readdirSync(modulesDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+      
+      for (const moduleName of modules) {
+        const moduleTfvarsExample = path.join(modulesDir, moduleName, 'terraform.tfvars.example');
+        const moduleTfvars = path.join(modulesDir, moduleName, 'terraform.tfvars');
+        
+        if (fs.existsSync(moduleTfvarsExample)) {
+          moduleSetupNeeded.push(moduleName);
+        }
+      }
+    }
+
+    if (moduleSetupNeeded.length > 0) {
+      setupChoices.push({
+        name: `Setup module configurations (${moduleSetupNeeded.join(', ')})`,
+        value: 'setup_modules'
+      });
+    }
+
+    setupChoices.push({
+      name: 'Show me what I need to do manually',
+      value: 'show_manual'
+    });
+
+    setupChoices.push({
+      name: 'Skip setup (I\'ll configure later)',
+      value: 'skip'
+    });
+
+    const { setupAction } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'setupAction',
+        message: 'How would you like to proceed with Terraform configuration?',
+        choices: setupChoices
+      }
+    ]);
+
+    switch (setupAction) {
+    case 'copy_tfvars':
+      await this.copyTerraformVars();
+      break;
+    case 'setup_modules':
+      await this.setupModuleConfigurations(moduleSetupNeeded);
+      break;
+    case 'show_manual':
+      await this.showManualSetupInstructions();
+      break;
+    case 'skip':
+      console.log(chalk.yellow('\n⏭️  Configuration skipped. Remember to configure before running terraform commands!'));
+      break;
+    }
+
+    // Always show next steps
+    await this.showNextSteps();
+  }
+
+  async copyTerraformVars() {
+    try {
+      const tfvarsExamplePath = path.join(this.outputDir, 'terraform.tfvars.example');
+      const tfvarsPath = path.join(this.outputDir, 'terraform.tfvars');
+      
+      if (fs.existsSync(tfvarsPath)) {
+        const { overwrite } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'overwrite',
+            message: 'terraform.tfvars already exists. Overwrite it?',
+            default: false
+          }
+        ]);
+        
+        if (!overwrite) {
+          console.log(chalk.yellow('💡 Keeping existing terraform.tfvars file'));
+          return;
+        }
+      }
+
+      fs.copyFileSync(tfvarsExamplePath, tfvarsPath);
+      console.log(chalk.green(`✅ Copied terraform.tfvars.example → terraform.tfvars`));
+      console.log(chalk.cyan('📝 Edit terraform.tfvars to customize your configuration'));
+      
+    } catch (error) {
+      console.log(chalk.red(`❌ Failed to copy terraform.tfvars: ${error.message}`));
+    }
+  }
+
+  async setupModuleConfigurations(moduleNames) {
+    console.log(chalk.cyan(`\n📦 Setting up module configurations...`));
+    
+    for (const moduleName of moduleNames) {
+      const { setupModule } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'setupModule',
+          message: `Setup ${moduleName} module configuration?`,
+          default: true
+        }
+      ]);
+      
+      if (setupModule) {
+        const moduleDir = path.join(this.outputDir, 'modules', moduleName);
+        const tfvarsExamplePath = path.join(moduleDir, 'terraform.tfvars.example');
+        const tfvarsPath = path.join(moduleDir, 'terraform.tfvars');
+        
+        try {
+          if (fs.existsSync(tfvarsExamplePath)) {
+            fs.copyFileSync(tfvarsExamplePath, tfvarsPath);
+            console.log(chalk.green(`  ✅ Setup ${moduleName}/terraform.tfvars`));
+          }
+        } catch (error) {
+          console.log(chalk.red(`  ❌ Failed to setup ${moduleName}: ${error.message}`));
+        }
+      }
+    }
+  }
+
+  async showManualSetupInstructions() {
+    console.log(chalk.cyan('\n📋 MANUAL SETUP INSTRUCTIONS'));
+    console.log(chalk.gray('═'.repeat(50)));
+    
+    console.log(chalk.white('\n1. Configure Terraform variables:'));
+    
+    const tfvarsExamplePath = path.join(this.outputDir, 'terraform.tfvars.example');
+    if (fs.existsSync(tfvarsExamplePath)) {
+      console.log(chalk.gray(`   cd ${this.outputDir}`));
+      console.log(chalk.gray('   cp terraform.tfvars.example terraform.tfvars'));
+      console.log(chalk.gray('   # Edit terraform.tfvars with your values'));
+    }
+
+    console.log(chalk.white('\n2. Initialize Terraform:'));
+    console.log(chalk.gray(`   cd ${this.outputDir}`));
+    console.log(chalk.gray('   terraform init'));
+    
+    console.log(chalk.white('\n3. Plan your infrastructure:'));
+    console.log(chalk.gray('   terraform plan'));
+    
+    console.log(chalk.white('\n4. Apply when ready:'));
+    console.log(chalk.gray('   terraform apply'));
+
+    // Check for module configurations
+    const modulesDir = path.join(this.outputDir, 'modules');
+    if (fs.existsSync(modulesDir)) {
+      const modules = fs.readdirSync(modulesDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+      
+      if (modules.length > 0) {
+        console.log(chalk.white('\n5. Configure individual modules (optional):'));
+        for (const moduleName of modules) {
+          const moduleTfvarsExample = path.join(modulesDir, moduleName, 'terraform.tfvars.example');
+          if (fs.existsSync(moduleTfvarsExample)) {
+            console.log(chalk.gray(`   cd ${this.outputDir}/modules/${moduleName}`));
+            console.log(chalk.gray('   cp terraform.tfvars.example terraform.tfvars'));
+          }
+        }
+      }
+    }
+
+    console.log(chalk.yellow('\n⚠️  IMPORTANT: Configure terraform.tfvars before running terraform commands!'));
+  }
+
+  async showNextSteps() {
+    console.log(chalk.cyan('\n🚀 NEXT STEPS'));
+    console.log(chalk.gray('═'.repeat(30)));
+    
+    console.log(chalk.white('1. Review and edit terraform.tfvars'));
+    console.log(chalk.white('2. Initialize: terraform init'));
+    console.log(chalk.white('3. Plan: terraform plan'));
+    console.log(chalk.white('4. Apply: terraform apply'));
+    
+    console.log(chalk.cyan('\n📖 Useful commands:'));
+    console.log(chalk.gray('• rig security --scan    # Check for security issues'));
+    console.log(chalk.gray('• rig cost --analyze     # Analyze infrastructure costs'));
+    console.log(chalk.gray('• terraform validate     # Validate configuration'));
+    console.log(chalk.gray('• terraform destroy      # Clean up resources'));
+    
+    const projectId = process.env.GCP_PROJECT_ID || 'your-gcp-project';
+    console.log(chalk.green(`\n✨ Your Terraform configuration is ready for project: ${projectId}`));
+  }
+
+  async handleModuleSetup(moduleDir, moduleName) {
+    if (!fs.existsSync(moduleDir)) {
+      return;
+    }
+
+    const tfvarsExamplePath = path.join(moduleDir, 'terraform.tfvars.example');
+    const tfvarsPath = path.join(moduleDir, 'terraform.tfvars');
+
+    if (!fs.existsSync(tfvarsExamplePath)) {
+      return;
+    }
+
+    console.log(chalk.cyan(`\n⚙️  ${moduleName.toUpperCase()} MODULE SETUP`));
+    
+    const { setupAction } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'setupAction',
+        message: `How would you like to setup the ${moduleName} module?`,
+        choices: [
+          {
+            name: '🔧 Let Rig copy terraform.tfvars.example → terraform.tfvars',
+            value: 'auto_copy'
+          },
+          {
+            name: '📋 Show me manual setup instructions',
+            value: 'manual'
+          },
+          {
+            name: '⏭️  Skip this module setup',
+            value: 'skip'
+          }
+        ]
+      }
+    ]);
+
+    switch (setupAction) {
+      case 'auto_copy':
+        try {
+          if (fs.existsSync(tfvarsPath)) {
+            const { overwrite } = await inquirer.prompt([
+              {
+                type: 'confirm',
+                name: 'overwrite',
+                message: `terraform.tfvars already exists in ${moduleName}. Overwrite?`,
+                default: false
+              }
+            ]);
+            
+            if (!overwrite) {
+              console.log(chalk.yellow(`⏭️  Skipped ${moduleName} module setup`));
+              return;
+            }
+          }
+
+          fs.copyFileSync(tfvarsExamplePath, tfvarsPath);
+          console.log(chalk.green(`✅ Copied ${moduleName}/terraform.tfvars.example → terraform.tfvars`));
+          console.log(chalk.cyan(`📝 Edit ${moduleName}/terraform.tfvars to customize module configuration`));
+          
+        } catch (error) {
+          console.log(chalk.red(`❌ Failed to setup ${moduleName} module: ${error.message}`));
+        }
+        break;
+
+      case 'manual':
+        console.log(chalk.cyan(`\n📋 MANUAL SETUP - ${moduleName.toUpperCase()} MODULE`));
+        console.log(chalk.gray('═'.repeat(40)));
+        console.log(chalk.white(`\n1. Navigate to module directory:`));
+        console.log(chalk.gray(`   cd ${moduleDir}`));
+        console.log(chalk.white(`\n2. Copy example configuration:`));
+        console.log(chalk.gray('   cp terraform.tfvars.example terraform.tfvars'));
+        console.log(chalk.white(`\n3. Edit configuration:`));
+        console.log(chalk.gray('   # Edit terraform.tfvars with your values'));
+        console.log(chalk.white(`\n4. Initialize module (if standalone):`));
+        console.log(chalk.gray('   terraform init'));
+        console.log(chalk.yellow(`\n⚠️  Remember to configure terraform.tfvars before using this module!`));
+        break;
+
+      case 'skip':
+        console.log(chalk.yellow(`⏭️  Skipped ${moduleName} module setup`));
+        break;
     }
   }
 }
