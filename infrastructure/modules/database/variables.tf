@@ -1,16 +1,19 @@
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
+  default     = "xometrydevops-training"
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
+  default     = "dev"
 }
 
 variable "region" {
   description = "GCP Region"
   type        = string
+  default     = "us-central1"
 }
 
 variable "database_type" {
@@ -58,4 +61,5 @@ variable "backup_enabled" {
 variable "vpc_id" {
   description = "VPC ID for private IP"
   type        = string
+  default     = "default"
 }

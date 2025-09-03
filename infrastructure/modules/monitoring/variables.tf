@@ -1,11 +1,13 @@
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
+  default     = "xometrydevops-training"
 }
 
 variable "environment" {
   description = "Environment name"
   type        = string
+  default     = "dev"
 }
 
 variable "enable_logging" {

@@ -1,5 +1,19 @@
 # Monitoring Module
 
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = "us-central1"
+}
+
 # Log sink for centralized logging
 resource "google_logging_project_sink" "main" {
   name        = "${var.project_id}-${var.environment}-sink"

@@ -4,10 +4,12 @@
 terraform {
   required_version = ">= 1.0"
   
-  backend "gcs" {
-    bucket = "xometrydevops-training-terraform-state"
-    prefix = "env/dev"
-  }
+  # Backend configuration removed for easier local development
+  # To use remote state, create a GCS bucket and uncomment:
+  # backend "gcs" {
+  #   bucket = "xometrydevops-training-terraform-state"
+  #   prefix = "env/dev"
+  # }
 }
 
 provider "google" {

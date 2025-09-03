@@ -1,5 +1,19 @@
 # Storage Module
 
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
 resource "google_storage_bucket" "main" {
   name          = var.bucket_name
   location      = var.storage_class == "MULTI_REGIONAL" ? "US" : var.region

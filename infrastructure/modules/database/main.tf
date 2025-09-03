@@ -1,5 +1,19 @@
 # Database Module
 
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
 resource "google_sql_database_instance" "main" {
   name             = "${var.project_id}-${var.environment}-db"
   database_version = "${upper(var.database_type)}_${var.database_version}"
@@ -49,7 +63,7 @@ resource "google_secret_manager_secret" "db_password" {
   secret_id = "${var.project_id}-${var.environment}-db-password"
 
   replication {
-    automatic = true
+    auto {}
   }
 }
 
