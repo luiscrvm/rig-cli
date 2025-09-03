@@ -1,2 +1,4 @@
 {"level":"error","message":"Infrastructure generation failed: this.generateJenkins is not a function","timestamp":"2025-09-02T00:28:40.854Z"}
 {"level":"error","message":"Infrastructure generation failed: this.generateJenkins is not a function","timestamp":"2025-09-02T00:46:24.235Z"}
+{"level":"error","message":"Infrastructure generation failed: ENOENT: no such file or directory, open '/Volumes/ExternalSSD/hw/devops-sre/devops-cli/sandbox/test-docker/Dockerfile'","timestamp":"2025-09-02T22:38:20.882Z"}
+{"level":"error","message":"Infrastructure generation failed: ENOENT: no such file or directory, open '/Volumes/ExternalSSD/hw/devops-sre/devops-cli/sandbox/test-docker/Dockerfile'","timestamp":"2025-09-02T22:39:27.191Z"}
