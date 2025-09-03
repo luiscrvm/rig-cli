@@ -195,32 +195,49 @@ function createDefaultInterpretation(prompt, analysis) {
   if (lowerPrompt.includes('staging')) environments.push('staging');
   if (lowerPrompt.includes('prod')) environments.push('prod');
   if (environments.length === 0) {
-    environments.push('dev', 'prod'); // Default to dev and prod
+    // If only dev mentioned or cheapest option, default to dev only
+    if (lowerPrompt.includes('cheapest') || !lowerPrompt.includes('prod')) {
+      environments.push('dev');
+    } else {
+      environments.push('dev', 'prod');
+    }
   }
 
+  // Detect explicit exclusions and inclusions
+  const hasNoCicd = lowerPrompt.includes('no cicd') || lowerPrompt.includes('no ci/cd');
+  const hasJustCompute = lowerPrompt.includes('just') && (lowerPrompt.includes('compute') || lowerPrompt.includes('server'));
+  const hasCheapestOption = lowerPrompt.includes('cheapest');
+  
   // Detect components based on keywords
   const components = [];
-  if (lowerPrompt.includes('database') || lowerPrompt.includes('db')) {
-    components.push('database');
-  }
-  if (lowerPrompt.includes('storage') || lowerPrompt.includes('bucket')) {
-    components.push('storage');
-  }
-  if (lowerPrompt.includes('network') || lowerPrompt.includes('vpc')) {
-    components.push('networking');
-  }
-  if (lowerPrompt.includes('monitor') || lowerPrompt.includes('logging')) {
-    components.push('monitoring');
-  }
-  if (lowerPrompt.includes('compute') || lowerPrompt.includes('server') || lowerPrompt.includes('instance')) {
-    components.push('compute');
-  }
   
-  // Default components if none specified
-  if (components.length === 0) {
-    components.push('compute', 'storage', 'networking');
-    if (analysis.hasDatabase || analysis.dependencies?.some(d => d.includes('sql') || d.includes('mongo'))) {
+  // If "just compute" is specified, only add compute
+  if (hasJustCompute) {
+    components.push('compute');
+  } else {
+    // Normal component detection
+    if (lowerPrompt.includes('database') || lowerPrompt.includes('db')) {
       components.push('database');
+    }
+    if (lowerPrompt.includes('storage') || lowerPrompt.includes('bucket')) {
+      components.push('storage');
+    }
+    if (lowerPrompt.includes('network') || lowerPrompt.includes('vpc')) {
+      components.push('networking');
+    }
+    if (lowerPrompt.includes('monitor') || lowerPrompt.includes('logging')) {
+      components.push('monitoring');
+    }
+    if (lowerPrompt.includes('compute') || lowerPrompt.includes('server') || lowerPrompt.includes('instance')) {
+      components.push('compute');
+    }
+    
+    // Default components if none specified (but not if "just compute" was specified)
+    if (components.length === 0) {
+      components.push('compute', 'storage', 'networking');
+      if (analysis.hasDatabase || analysis.dependencies?.some(d => d.includes('sql') || d.includes('mongo'))) {
+        components.push('database');
+      }
     }
   }
 
@@ -235,19 +252,26 @@ function createDefaultInterpretation(prompt, analysis) {
   }
 
   return {
-    intent: `Create ${environments.join(' and ')} environments with ${components.join(', ')}`,
+    intent: `Create ${environments.join(' and ')} environments with ${components.join(', ')}${hasCheapestOption ? ' (cheapest configuration)' : ''}`,
     environments,
     components,
     specifications: {
-      compute: environments.includes('prod') ? 'Production-grade instances with auto-scaling' : 'Cost-optimized instances',
+      compute: hasCheapestOption ? 'Cheapest possible instances (e2-micro)' : 
+               environments.includes('prod') ? 'Production-grade instances with auto-scaling' : 'Cost-optimized instances',
       database: components.includes('database') ? 'Managed database service with backups' : null,
       storage: components.includes('storage') ? 'Object storage with lifecycle policies' : null,
-      networking: 'VPC with public and private subnets',
+      networking: components.includes('networking') ? 'VPC with public and private subnets' : null,
       security: 'Firewall rules, IAM policies, and encryption',
       monitoring: components.includes('monitoring') ? 'Logging, metrics, and alerting' : 'Basic logging'
     },
     infrastructure_type: infrastructureType,
-    recommendations: [
+    noCicd: hasNoCicd,
+    cheapestOption: hasCheapestOption,
+    recommendations: hasNoCicd ? [
+      'Infrastructure configured without CI/CD as requested',
+      'Consider adding monitoring for production environments',
+      'Manual deployment process will be required'
+    ] : [
       'Consider adding CI/CD pipelines for automated deployment',
       'Implement infrastructure as code best practices',
       'Set up monitoring and alerting for production'
@@ -288,11 +312,13 @@ async function generateInfrastructure(interpretation, analysis, options, service
   }
 
   // Generate CI/CD if not explicitly excluded
-  if (!options.noCicd && (interpretation.components.includes('cicd') || interpretation.environments.includes('prod'))) {
+  if (!options.noCicd && !interpretation.noCicd && (interpretation.components.includes('cicd') || interpretation.environments.includes('prod'))) {
     console.log(chalk.yellow('\n🔄 Generating CI/CD pipelines...'));
     const cicdOutputDir = path.join(baseOutputDir, 'cicd');
     const cicdGenerator = new CICDGenerator(aiAssistant, logger, cicdOutputDir);
     await cicdGenerator.generateGitHubActions(analysis, options);
+  } else if (interpretation.noCicd) {
+    console.log(chalk.blue('\n⏭️  Skipping CI/CD generation (excluded by user)'));
   }
 
   // Create README with instructions
@@ -331,10 +357,10 @@ async function generateEnvironmentSpecificTerraform(generator, analysis, environ
 terraform {
   required_version = ">= 1.0"
   
-  backend "gcs" {
+  ${interpretation.cheapestOption ? '# Backend disabled for cheapest option (uses local state)' : `backend "gcs" {
     bucket = "${analysis.cloudProject}-terraform-state"
     prefix = "env/${environment}"
-  }
+  }`}
 }
 
 provider "google" {
@@ -375,8 +401,8 @@ module "compute" {
   max_instances = ${environment === 'prod' ? '10' : '3'}
   
   # Network dependencies
-  vpc_id = ${interpretation.components.includes('networking') ? 'module.networking.vpc_id' : 'var.vpc_id'}
-  subnet_id = ${interpretation.components.includes('networking') ? 'module.networking.private_subnet_id' : 'var.subnet_id'}
+  vpc_id = ${interpretation.components.includes('networking') ? 'module.networking.vpc_id' : '"default"'}
+  subnet_id = ${interpretation.components.includes('networking') ? 'module.networking.private_subnet_id' : '"default"'}
 }` : ''}
 
 ${interpretation.components.includes('database') ? `
@@ -575,6 +601,17 @@ output "environment" {
 }
 
 function getEnvironmentConfig(environment, interpretation) {
+  // Override with cheapest options if requested
+  if (interpretation.cheapestOption) {
+    return {
+      vpc_cidr: '10.0.0.0/16',
+      public_subnet_cidr: '10.0.1.0/24', 
+      private_subnet_cidr: '10.0.2.0/24',
+      instance_type: 'e2-micro', // Cheapest instance type
+      instance_count: 1 // Minimum instances
+    };
+  }
+
   const configs = {
     dev: {
       vpc_cidr: '10.0.0.0/16',
