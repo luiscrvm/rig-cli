@@ -1,7 +1,7 @@
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
-  default     = "xometrydevops-training"
+  # Default will be provided by the calling module or terraform.tfvars
 }
 
 variable "environment" {

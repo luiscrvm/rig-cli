@@ -4,12 +4,14 @@
 terraform {
   required_version = ">= 1.0"
   
-  # Backend configuration removed for easier local development
-  # To use remote state, create a GCS bucket and uncomment:
+  # Backend configuration for remote state (optional)
+  # OPTION 1: Local state (default) - no backend block needed
+  # OPTION 2: GCS remote state - uncomment and customize:
   # backend "gcs" {
-  #   bucket = "xometrydevops-training-terraform-state"
+  #   bucket = "${var.project_id}-terraform-state"  # Replace with your bucket name
   #   prefix = "env/dev"
   # }
+  # OPTION 3: Other backends - see: https://terraform.io/language/settings/backends
 }
 
 provider "google" {

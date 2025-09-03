@@ -1,7 +1,8 @@
 # DEV Environment Configuration
 # Copy this file to terraform.tfvars and update values
 
-project_id = "xometrydevops-training"
+# Replace with your actual GCP project ID
+project_id = "your-gcp-project-id"
 region     = "us-central1"
 
 

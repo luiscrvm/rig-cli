@@ -156,10 +156,14 @@ export class TerraformGenerator {
 terraform {
   required_version = ">= 1.0"
   
-  backend "gcs" {
-    bucket = var.terraform_state_bucket
-    prefix = "terraform/state"
-  }
+  # Backend configuration (optional) 
+  # OPTION 1: Local state (default) - no backend block needed for development
+  # OPTION 2: GCS remote state - uncomment below and set bucket name:
+  # backend "gcs" {
+  #   bucket = "${projectId}-terraform-state"  # Create this bucket first
+  #   prefix = "terraform/state"
+  # }
+  # OPTION 3: Other backends available - see Terraform docs
 }
 
 provider "${provider}" {
@@ -318,10 +322,11 @@ variable "environment" {
   }
 }
 
-variable "terraform_state_bucket" {
-  description = "GCS bucket for Terraform state"
-  type        = string
-}
+# Uncomment if using GCS backend:
+# variable "terraform_state_bucket" {
+#   description = "GCS bucket for Terraform state"
+#   type        = string
+# }
 
 ${this.generateInfrastructureVariables(analysis)}`;
 
@@ -437,7 +442,9 @@ output "instance_ips" {
 
 # Required variables
 project_id              = "${analysis?.cloud?.projectId || 'your-gcp-project-id'}"
-terraform_state_bucket  = "${analysis?.cloud?.projectId || 'your-gcp-project'}-terraform-state"
+
+# Optional: Uncomment if using GCS backend
+# terraform_state_bucket  = "${analysis?.cloud?.projectId || 'your-gcp-project'}-terraform-state"
 
 # Optional variables
 project_name = "${this.getProjectName(analysis)}"
